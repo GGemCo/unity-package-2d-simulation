@@ -1,0 +1,23 @@
+{
+    "name": "GGemCo2DSimulationEditor",
+    "rootNamespace": "GGemCo2DSimulationEditor",
+    "references": [
+        "Unity.Addressables",
+        "Unity.Addressables.Editor",
+        "Unity.ResourceManager",
+        "GGemCoScripts",
+        "GGemCo2DCoreEditor",
+        "GGemCo2DSimulation"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
