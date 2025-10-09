@@ -1,0 +1,19 @@
+{
+    "name": "GGemCo2DSimulation",
+    "rootNamespace": "GGemCo2DSimulation",
+    "references": [
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "GGemCoScripts",
+        "GGemCo2DControl"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
