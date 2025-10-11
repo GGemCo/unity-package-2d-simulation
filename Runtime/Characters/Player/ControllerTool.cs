@@ -1,5 +1,4 @@
-﻿using System;
-using GGemCo2DCore;
+﻿using GGemCo2DCore;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -8,7 +7,7 @@ using UnityEngine.InputSystem;
 namespace GGemCo2DSimulation
 {
     [DisallowMultipleComponent]
-    public class ToolController : MonoBehaviour
+    public class ControllerTool : MonoBehaviour
     {
         [Header("Refs")]
         public Transform user;
