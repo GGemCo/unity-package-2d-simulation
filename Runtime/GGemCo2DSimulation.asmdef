@@ -4,6 +4,7 @@
     "references": [
         "Unity.Addressables",
         "Unity.ResourceManager",
+        "Unity.InputSystem",
         "GGemCoScripts",
         "GGemCo2DControl"
     ],

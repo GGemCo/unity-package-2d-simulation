@@ -29,6 +29,7 @@ namespace GGemCo2DSimulation
                 Destroy(gameObject);
                 return;
             }
+            // gameObject.AddComponent<BootstrapperMap>();
         }
 
     }
