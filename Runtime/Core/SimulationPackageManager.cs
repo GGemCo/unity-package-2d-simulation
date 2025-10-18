@@ -1,5 +1,7 @@
-﻿using GGemCo2DCore;
+﻿using System.Collections.Generic;
+using GGemCo2DCore;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 namespace GGemCo2DSimulation
 {
@@ -10,6 +12,14 @@ namespace GGemCo2DSimulation
     public class SimulationPackageManager : MonoBehaviour
     {
         public static SimulationPackageManager Instance { get; private set; }
+        
+        [Header("GridInformation 타겟")]
+        
+        [HideInInspector] public WetDecaySystem wetDecaySystem;
+        [HideInInspector] public SimulationDirtyTracker simulationDirtyTracker;
+        [HideInInspector] public SimulationSaveContributor simulationSaveContributor;
+        
+        private Dictionary<string, GridInformation> _pathToGrid;
         
         private void Awake()
         {
@@ -29,8 +39,26 @@ namespace GGemCo2DSimulation
                 Destroy(gameObject);
                 return;
             }
-            // gameObject.AddComponent<BootstrapperMap>();
+            gameObject.AddComponent<BootstrapperCharacterSpawn>();
+            gameObject.AddComponent<BootstrapperMap>();
+            wetDecaySystem = gameObject.AddComponent<WetDecaySystem>();
+            simulationDirtyTracker = gameObject.AddComponent<SimulationDirtyTracker>();
+            
+            // Core에 저장 기여자 등록
+            simulationSaveContributor = new SimulationSaveContributor(simulationDirtyTracker, this);
+            SaveRegistry.Register(simulationSaveContributor);
         }
-
+        private void OnDestroy()
+        {
+            if (simulationSaveContributor != null)
+                SaveRegistry.Unregister(simulationSaveContributor);
+        }
+        
+        // 새 게임 시작 시 호출
+        public void ResetAccumulatedSave()
+        {
+            simulationSaveContributor?.ClearAccumulated();
+            SaveRegistry.ClearPendingRestore(); // 선택적
+        }
     }
 }

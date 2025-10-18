@@ -1,17 +1,16 @@
-﻿// Runtime/Targeting/CrossAreaTargeting.cs
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace GGemCo2DSimulation
 {
-    [CreateAssetMenu(menuName = "GGemCo/Tools/Targeting/Cross Area")]
+    [CreateAssetMenu(menuName = ConfigScriptableObjectSimulation.ToolTargetingCrossArea.MenuName, order = ConfigScriptableObjectSimulation.ToolTargetingCrossArea.Ordering)]
     public class CrossAreaTargeting : TargetingPolicy
     {
         [Header("Cross")]
         [Min(1)] public int radius = 1;
         [Tooltip("중앙(커서) 포함 여부")] public bool includeCenterCell = true;
 
-        protected override IEnumerable<Vector3Int> OnGetCellsInternal(ActionContext ctx)
+        protected override IEnumerable<Vector3Int> OnGetCellsInternal(ToolActionContext ctx)
         {
             var c = ctx.cursorCell;
             if (includeCenterCell) yield return c;

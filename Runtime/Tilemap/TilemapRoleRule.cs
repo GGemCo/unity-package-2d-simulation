@@ -3,25 +3,48 @@ using UnityEngine;
 
 namespace GGemCo2DSimulation
 {
-    [CreateAssetMenu(menuName = "GGemCo/Tilemap/RoleRule")]
+    public enum ColliderRequirement
+    {
+        Ignore,         // 무시 (있든 없든 상관없음)
+        Require,        // 반드시 있어야 함
+        Forbid          // 있으면 안 됨
+    }
+    [CreateAssetMenu(menuName = ConfigScriptableObjectSimulation.TilemapRoleRule.MenuName, order = ConfigScriptableObjectSimulation.TilemapRoleRule.Ordering)]
     public class TilemapRoleRule : ScriptableObject
     {
-        [Header("Target Role")] public TileRole role;
+        [Header("Target Role")]
+        [Tooltip("이 규칙이 적용될 Tilemap의 역할 (예: Ground, Object, House 등)")]
+        public TileRole role;
 
-        [Header("Name / Sorting / Tag / Layer")]
-        public string nameRegex; // 예: "(?i)ground|floor"
+        [Header("Name Filter (Regex)")]
+        [Tooltip("Tilemap 오브젝트 이름에 매칭될 정규식. 예: (?i)ground|floor")]
+        public string nameRegex;
 
-        public string sortingLayerName; // 예: "Ground"
-        public int sortingOrderMin = int.MinValue;
-        public int sortingOrderMax = int.MaxValue;
-        public string unityTag; // Unity Tag
-        public int unityLayer = -1; // Unity Layer(-1=무시)
+        [Header("Collider Requirement")]
+        [Tooltip("TilemapCollider2D 존재 조건\n- Ignore: 상관 없음\n- Require: 반드시 있어야 함\n- Forbid: 있으면 안 됨")]
+        public ColliderRequirement colliderRequirement = ColliderRequirement.Ignore;
 
-        [Header("Components")] public bool requireCollider; // TilemapCollider2D 존재 필수?
-        public bool forbidCollider; // 있으면 제외?
-        public bool requireRenderer = true;
+        [Header("Scoring Settings")]
+        [Tooltip("규칙이 일치할 때 가산할 점수 (1~100)")]
+        [Range(1, 100)] public int weight = 10;
 
-        [Header("Scoring")] [Range(1, 100)] public int weight = 10; // 규칙이 맞으면 가산점
+        // [Tooltip] TilemapRenderer의 Sorting Layer 이름 (명시한 경우에만 검사)
+        [HideInInspector] public string sortingLayerName;
+
+        // [Tooltip] Sorting Order 최소값 (보조 조건)
+        [HideInInspector] public int sortingOrderMin = 0;
+
+        // [Tooltip] Sorting Order 최대값 (보조 조건)
+        [HideInInspector] public int sortingOrderMax = 0;
+
+        // [Tooltip] Unity Tag (명시한 경우에만 검사)
+        [HideInInspector] public string unityTag;
+
+        // [Tooltip] Unity Layer (-1 = 무시)
+        [HideInInspector] public int unityLayer = -1;
+
+        // [Tooltip] TilemapRenderer가 반드시 존재해야 하는가? (없으면 무시됨)
+        [HideInInspector] public bool requireRenderer = true;
 
         // TilemapRoleRule.cs 내부
         public int Score(GameObject go)
@@ -40,7 +63,7 @@ namespace GGemCo2DSimulation
                 else
                 {
                     // 이름을 명시했다면 불일치 시 바로 탈락시키고 싶다면 주석 해제:
-                    // return 0;
+                    return 0;
                 }
             }
 
@@ -50,8 +73,9 @@ namespace GGemCo2DSimulation
             {
                 if (r && r.sortingLayerName == sortingLayerName)
                 {
-                    score += weight;
-                    matchedKey = true;
+                    // 사용하지 않는다.
+                    // score += weight;
+                    // matchedKey = true;
                 }
                 else
                 {
@@ -63,7 +87,11 @@ namespace GGemCo2DSimulation
             // 3) Tag / Layer
             if (!string.IsNullOrEmpty(unityTag))
             {
-                if (go.CompareTag(unityTag)) { score += weight; matchedKey = true; }
+                if (go.CompareTag(unityTag))
+                {
+                    // 사용하지 않는다.
+                    // score += weight; matchedKey = true;
+                }
                 else
                 {
                     // 필요 시 강제 탈락:
@@ -72,7 +100,11 @@ namespace GGemCo2DSimulation
             }
             if (unityLayer >= 0)
             {
-                if (go.layer == unityLayer) { score += weight; matchedKey = true; }
+                // 사용하지 않는다.
+                if (go.layer == unityLayer)
+                {
+                    // score += weight; matchedKey = true;
+                }
                 else
                 {
                     // 필요 시 강제 탈락:
@@ -83,17 +115,26 @@ namespace GGemCo2DSimulation
             // 4) Sorting Order 범위는 “보조 조건”으로만 사용
             if (r)
             {
-                if (r.sortingOrder >= sortingOrderMin && r.sortingOrder <= sortingOrderMax)
-                    score += weight; // 선택적 가산점
+                // 사용하지 않는다.
+                // if (r.sortingOrder >= sortingOrderMin && r.sortingOrder <= sortingOrderMax)
+                //     score += weight; // 선택적 가산점
             }
             else if (requireRenderer) return 0;
 
             // 5) Collider 제약
             var col = go.GetComponent<UnityEngine.Tilemaps.TilemapCollider2D>();
-            if (requireCollider && !col) return 0;
-            if (forbidCollider  &&  col) return 0;
-            if (requireCollider &&  col) score += weight;
-            if (forbidCollider  && !col) score += weight;
+            switch (colliderRequirement)
+            {
+                case ColliderRequirement.Require:
+                    if (!col) return 0;
+                    score += weight;
+                    break;
+
+                case ColliderRequirement.Forbid:
+                    if (col) return 0;
+                    score += weight;
+                    break;
+            }
 
             // 6) 핵심 키가 하나도 안 맞으면 “노이즈 매칭” 방지
             if (!matchedKey) return 0;

@@ -1,9 +1,10 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 namespace GGemCo2DSimulation
 {
-    public sealed class ActionContext
+    public sealed class ToolActionContext
     {
         public Transform user;
         public Grid grid;
@@ -16,8 +17,13 @@ namespace GGemCo2DSimulation
         public AutoTilemapRegistry registry;
         public GridProbe probe;
         public ToolDefinition tool;
+        public SimulationDirtyTracker dirtyTracker;
 
         // 런타임 타일 모음(SO/MB)
-        public ToolRuntimeTiles tileset;
+        public TileBase defaultTileHoe;
+        public TileBase defaultTileWet;
+
+        // 도구, 씨앗 item Uid
+        public int itemUid;
     }
 }

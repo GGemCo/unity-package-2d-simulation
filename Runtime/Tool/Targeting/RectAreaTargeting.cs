@@ -1,25 +1,32 @@
-﻿// Runtime/Targeting/RectAreaTargeting.cs
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace GGemCo2DSimulation
 {
     public enum RectPivot { Cursor, Origin, CenteredOnCursor }
 
-    [CreateAssetMenu(menuName = "GGemCo/Tools/Targeting/Rect Area")]
+    [CreateAssetMenu(menuName = ConfigScriptableObjectSimulation.ToolTargetingRect.MenuName, order = ConfigScriptableObjectSimulation.ToolTargetingRect.Ordering)]
     public class RectAreaTargeting : TargetingPolicy
     {
-        [Header("Rect")]
+        [Header("Rect Area Settings")]
+
+        [Tooltip("사각형의 가로 크기(타일 단위)입니다. 값이 1이면 폭이 1칸인 세로줄 형태가 됩니다.")]
         [Min(1)] public int width = 3;
+
+        [Tooltip("사각형의 세로 크기(타일 단위)입니다. 값이 1이면 높이가 1칸인 가로줄 형태가 됩니다.")]
         [Min(1)] public int height = 3;
 
-        [Tooltip("사각형 기준점: Cursor(좌하 기준), Origin(좌하 기준), CenteredOnCursor(중심 정렬)")]
+        [Tooltip("사각형의 기준점을 결정합니다.\n" +
+                 "- Cursor : 커서 위치를 좌하단 기준으로 사용\n" +
+                 "- Origin : 플레이어 위치를 좌하단 기준으로 사용\n" +
+                 "- CenteredOnCursor : 커서를 중심으로 정렬")]
         public RectPivot pivot = RectPivot.CenteredOnCursor;
 
-        [Tooltip("원점→커서 우세축(4방향)에 맞춰 사각형을 회전할지 여부")]
+        [Tooltip("원점에서 커서 방향(상/하/좌/우)에 따라 사각형을 회전시킬지 여부입니다.\n" +
+                 "활성화하면 도구의 방향에 맞춰 폭과 높이가 자동으로 맞춰집니다.")]
         public bool alignToDominantAxis = true;
 
-        protected override IEnumerable<Vector3Int> OnGetCellsInternal(ActionContext ctx)
+        protected override IEnumerable<Vector3Int> OnGetCellsInternal(ToolActionContext ctx)
         {
             var cells = new List<Vector3Int>();
             var axis = DominantAxis(ctx.originCell, ctx.cursorCell); // (1,0),(-1,0),(0,1),(0,-1)

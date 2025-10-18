@@ -1,17 +1,16 @@
-﻿// Runtime/Targeting/LineTargeting.cs
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace GGemCo2DSimulation
 {
-    [CreateAssetMenu(menuName = "GGemCo/Tools/Targeting/Line")]
+    [CreateAssetMenu(menuName = ConfigScriptableObjectSimulation.ToolTargetingLine.MenuName, order = ConfigScriptableObjectSimulation.ToolTargetingLine.Ordering)]
     public class LineTargeting : TargetingPolicy
     {
         [Header("Line")]
         [Tooltip("원점에서 출발하여 커서 방향으로 직선을 긋습니다.")]
         public bool includeOrigin = false;
 
-        protected override IEnumerable<Vector3Int> OnGetCellsInternal(ActionContext ctx)
+        protected override IEnumerable<Vector3Int> OnGetCellsInternal(ToolActionContext ctx)
         {
             var from = includeOrigin ? ctx.originCell : StepTowards(ctx.originCell, ctx.cursorCell);
             var to   = ctx.cursorCell;

@@ -1,148 +1,209 @@
 ﻿using GGemCo2DCore;
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
+using UnityEngine.Tilemaps;
 
 namespace GGemCo2DSimulation
 {
+    /// <summary>
+    /// 플레이어 도구, 씨앗 사용처리
+    /// </summary>
     [DisallowMultipleComponent]
     public class ControllerTool : MonoBehaviour
     {
         [Header("Refs")]
-        public Transform user;
-        public Grid grid;
-        public GridProbe probe;
-        public AutoTilemapRegistry registry;
-        public HitLocationVisualizer visualizer;
+        private Transform _user;
+        private Grid _grid;
+        private GridProbe _probe;
+        private AutoTilemapRegistry _registry;
+        private HitLocationVisualizer _visualizer;
 
         [Header("Tool")]
-        public ToolDefinition currentTool;
-        public TargetingPolicy defaultTargeting; // 없을 때 사용
-        public ToolRuntimeTiles tileset;         // 실제 쓰기 타일 모음
+        // 현재 사용중인 도구, 씨앗
+        private ToolDefinition _currentTool;
+        // 도구, 씨앗 ItemUid
+        private int _currentItemUid;
+        
+        // 실제 쓰기 타일 모음
+        private bool _alwaysShow = true;
+        private bool _hideWhenMoving = true;
 
-        [Header("UI Behavior")]
-        public bool alwaysShow = true;
-        public bool hideWhenMoving = true;
+        private Player _player;
+        private bool _isValid;
+        private ToolActionContext _currentToolActionContext;
+        private SimulationDirtyTracker _simulationDirtyTracker;
+        private TileBase _defaultTileHoe;
+        private TileBase _defaultTileWet;
+
+        private void Awake()
+        {
+            _alwaysShow = PlayerPrefsManager.LoadToolPreviewAlwaysShow();
+            _hideWhenMoving = PlayerPrefsManager.LoadToolPreviewHideWhenMoving();
+            _currentTool = null;
+            if (AddressableLoaderSettingsSimulation.Instance)
+            {
+                if (!AddressableLoaderSettingsSimulation.Instance.simulationSettings)
+                {
+                    GcLogger.LogError($"GGemCoSimulationSettings 스크립터블 오브젝트가 없습니다.");
+                    return;
+                }
+                _defaultTileHoe = AddressableLoaderSettingsSimulation.Instance.simulationSettings.hoedTile;
+                if (!_defaultTileHoe)
+                {
+                    GcLogger.LogError(
+                        $"GGemCoSimulationSettings 스크립터블 오브젝트에 {nameof(AddressableLoaderSettingsSimulation.Instance.simulationSettings.hoedTile)}을 등록해주세요.");
+                }
+                _defaultTileWet = AddressableLoaderSettingsSimulation.Instance.simulationSettings.wetTile;
+                if (!_defaultTileWet)
+                {
+                    GcLogger.LogError(
+                        $"GGemCoSimulationSettings 스크립터블 오브젝트에 {nameof(AddressableLoaderSettingsSimulation.Instance.simulationSettings.wetTile)}을 등록해주세요.");
+                }
+            }
+        }
 
         private void Start()
         {
             if (!SceneGame.Instance) return;
-            var sceneGame = SceneGame.Instance;
-            user = sceneGame.player.transform;
-            grid = GameObject.FindWithTag(ConfigTags.GetValue(ConfigTags.Keys.GridTileMap))?.GetComponent<Grid>();
-            probe = sceneGame.player.GetComponent<GridProbe>();
-            registry = GameObject.FindWithTag(ConfigTags.GetValue(ConfigTags.Keys.GridTileMap))?.GetComponent<AutoTilemapRegistry>();
-            visualizer = sceneGame.player.GetComponent<HitLocationVisualizer>();
+            _isValid = false;
+            _currentToolActionContext = null;
+            _user = transform;
+            _player = GetComponent<Player>();
+            if (!_player)
+            {
+                GcLogger.LogError($"{nameof(Player)} 스크립트가 없습니다.");
+                return;
+            }
+            _probe = GetComponent<GridProbe>();
+            if (!_probe)
+            {
+                GcLogger.LogError($"{nameof(GridProbe)} 스크립트가 없습니다.");
+                return;
+            }
+            _visualizer = GetComponent<HitLocationVisualizer>();
+            if (!_visualizer)
+            {
+                GcLogger.LogError($"{nameof(HitLocationVisualizer)} 스크립트가 없습니다.");
+                return;
+            }
+            
+            _grid = GameObject.FindWithTag(ConfigTags.GetValue(ConfigTags.Keys.GridTileMap))?.GetComponent<Grid>();
+            _registry = GameObject.FindWithTag(ConfigTags.GetValue(ConfigTags.Keys.GridTileMap))?.GetComponent<AutoTilemapRegistry>();
+            _simulationDirtyTracker = SimulationPackageManager.Instance.simulationDirtyTracker;
         }
 
-        void Update()
+        private void Update()
         {
-            if (!currentTool || !probe || !registry || !visualizer || !grid || !user)
-                return;
-
-            // 1) 포인터 위치 → 그리드 셀
-            var cursor = probe.GetCursorCell(GetPointerScreenPosition());
-
-            // 2) 사거리 체크
-            var origin = grid.WorldToCell(user.position);
-            if (!GridProbe.InRange(origin, cursor, currentTool.range, currentTool.metric))
+            if (_currentTool == null || !_currentTool.targeting || !_probe || !_registry || !_visualizer || !_grid || !_user)
             {
-                visualizer.Apply(new(), new() { cursor });
+                _currentToolActionContext = null;
+                _isValid = false;
                 return;
             }
 
-            // 3) 타게팅/검증
-            var targeting = currentTool.targeting ? currentTool.targeting : defaultTargeting;
-            var ctx = new ActionContext
+            // 유저가 툴 사용을 시작하면 중지하기
+            if (_player.IsStatusSimulationTool()) return;
+
+            // 1) 포인터 위치 → 그리드 셀
+            var cursor = _probe.GetCursorCell(PositionHelper.GetPointerScreenPosition());
+
+            // 2) 사거리 체크
+            var origin = _grid.WorldToCell(_user.position);
+            if (!GridProbe.InRange(origin, cursor, _currentTool.range, _currentTool.metric))
             {
-                user = user,
-                grid = grid,
+                _currentToolActionContext = null;
+                _isValid = false;
+
+                if (_alwaysShow)
+                {
+                    if (_hideWhenMoving && _player.IsStatusRun())
+                    {
+                        _visualizer.Clear();
+                    }
+                    else
+                    {
+                        _visualizer.Apply(new(), new() { cursor });
+                    }
+                }
+                else
+                {
+                    _visualizer.Clear();
+                }
+                return;
+            }
+            
+            // 3) 타게팅/검증
+            var targeting = _currentTool.targeting;
+            var ctx = new ToolActionContext
+            {
+                user = _user,
+                grid = _grid,
                 originCell = origin,
                 cursorCell = cursor,
-                registry = registry,
-                probe = probe,
-                tool = currentTool,
+                registry = _registry,
+                probe = _probe,
+                tool = _currentTool,
                 deltaTime = Time.deltaTime,
-                tileset = tileset
+                defaultTileHoe = _defaultTileHoe,
+                defaultTileWet = _defaultTileWet,
+                dirtyTracker = _simulationDirtyTracker,
+                itemUid = _currentItemUid
             };
             var cells = targeting.GetCells(ctx);
             ctx.targetCells = cells;
 
-            var result = currentTool.action.Validate(ctx);
-
+            var result = _currentTool.action.Validate(ctx);
+            _isValid = result.IsValid;
+            _currentToolActionContext = result.IsValid ? ctx : null;
+            
             // 4) 미리보기
-            if (alwaysShow && !(hideWhenMoving && IsMoving()))
-                visualizer.Apply(result.ValidCells, result.InvalidCells);
+            if (_alwaysShow)
+            {
+                if (_hideWhenMoving && _player.IsStatusRun())
+                {
+                    _visualizer.Clear();
+                }
+                else
+                {
+                    _visualizer.Apply(result.ValidCells, result.InvalidCells);
+                }
+            }
             else
-                visualizer.Clear();
-
-            // 5) 실행(프라이머리 액션)
-            if (IsPrimaryActionPressedThisFrame() && result.IsValid)
-                currentTool.action.Execute(ctx);
-        }
-
-        // ----------------------------
-        // Input Abstraction
-        // ----------------------------
-
-        private Vector3 GetPointerScreenPosition()
-        {
-#if ENABLE_INPUT_SYSTEM
-            // 마우스 우선, 터치/패드 포인터 폴백
-            if (Mouse.current != null) return Mouse.current.position.ReadValue();
-            if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.isPressed)
-                return Touchscreen.current.primaryTouch.position.ReadValue();
-            // 게임패드엔 기본 포인터가 없으므로 마지막 마우스 위치 폴백
-            return Mouse.current != null ? Mouse.current.position.ReadValue() : Input.mousePosition;
-#else
-            return Input.mousePosition;
-#endif
-        }
-
-        private bool IsPrimaryActionPressedThisFrame()
-        {
-#if ENABLE_INPUT_SYSTEM
-            // 마우스 좌클릭 / 터치 탭 / 게임패드 South 버튼(A/×)
-            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) return true;
-            if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame) return true;
-            if (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame) return true;
-            return false;
-#else
-            return Input.GetMouseButtonDown(0);
-#endif
-        }
-
-        private bool IsMoving()
-        {
-#if ENABLE_INPUT_SYSTEM
-            float x = 0f, y = 0f;
-
-            // 키보드 WASD/화살표
-            if (Keyboard.current != null)
             {
-                var kb = Keyboard.current;
-                x += kb.dKey.isPressed || kb.rightArrowKey.isPressed ? 1f : 0f;
-                x -= kb.aKey.isPressed || kb.leftArrowKey.isPressed  ? 1f : 0f;
-                y += kb.wKey.isPressed || kb.upArrowKey.isPressed    ? 1f : 0f;
-                y -= kb.sKey.isPressed || kb.downArrowKey.isPressed  ? 1f : 0f;
+                _visualizer.Clear();
             }
+        }
+        /// <summary>
+        /// 도구 사용하기
+        /// </summary>
+        public void UseTool()
+        {
+            if (!_isValid || _currentToolActionContext == null) return;
+            _currentTool.action.Execute(_currentToolActionContext);
+        }
 
-            // 게임패드 좌스틱
-            if (Gamepad.current != null)
-            {
-                var ls = Gamepad.current.leftStick.ReadValue();
-                x = Mathf.Abs(ls.x) > Mathf.Abs(x) ? ls.x : x;
-                y = Mathf.Abs(ls.y) > Mathf.Abs(y) ? ls.y : y;
-            }
+        public bool IsValid() => _isValid;
+        /// <summary>
+        /// 씨앗 사용하기
+        /// </summary>
+        public void UseSeed()
+        {
+            if (!_isValid || _currentToolActionContext == null) return;
+            _currentTool.action.Execute(_currentToolActionContext);
+        }
 
-            // 터치 스와이프 기반 이동을 쓰는 프로젝트라면 여기서 추가 처리
-            return Mathf.Abs(x) + Mathf.Abs(y) > 0.01f;
-#else
-            var h = Input.GetAxisRaw("Horizontal");
-            var v = Input.GetAxisRaw("Vertical");
-            return Mathf.Abs(h) + Mathf.Abs(v) > 0.01f;
-#endif
+        public void ChangeAlwaysShow(bool value)
+        {
+            _alwaysShow = value;
+        }
+        public void ChangeHideWhenMoving(bool value)
+        {
+            _hideWhenMoving = value;
+        }
+
+        public void ChangeTool(ToolDefinition toolDefinition, int itemUid)
+        {
+            _currentTool = toolDefinition;
+            _currentItemUid = itemUid;
         }
     }
 }

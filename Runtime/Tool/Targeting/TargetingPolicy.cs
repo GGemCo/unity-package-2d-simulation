@@ -18,7 +18,7 @@ namespace GGemCo2DSimulation
         public bool includeCursor = true;
 
         /// <summary> 결과 셀 집합을 계산합니다. </summary>
-        public HashSet<Vector3Int> GetCells(ActionContext ctx)
+        public HashSet<Vector3Int> GetCells(ToolActionContext ctx)
         {
             var raw = OnGetCellsInternal(ctx);
             var result = new HashSet<Vector3Int>();
@@ -37,7 +37,7 @@ namespace GGemCo2DSimulation
         }
 
         /// <summary> 파생 클래스가 실제 모양을 산출합니다. range/metric 필터는 상위에서 처리. </summary>
-        protected abstract IEnumerable<Vector3Int> OnGetCellsInternal(ActionContext ctx);
+        protected abstract IEnumerable<Vector3Int> OnGetCellsInternal(ToolActionContext ctx);
 
         /// <summary> 원점→커서의 4방향(상/하/좌/우) 정렬 축을 반환합니다. </summary>
         protected static Vector2Int DominantAxis(Vector3Int origin, Vector3Int cursor)

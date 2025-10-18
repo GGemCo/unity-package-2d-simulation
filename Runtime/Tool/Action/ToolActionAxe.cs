@@ -3,10 +3,10 @@ using UnityEngine.Tilemaps;
 
 namespace GGemCo2DSimulation
 {
-    [CreateAssetMenu(menuName = "GGemCo/Tools/Action/Hoe")]
-    public class HoeAction : ToolAction
+    [CreateAssetMenu(menuName = ConfigScriptableObjectSimulation.ToolActionAxe.MenuName, order = ConfigScriptableObjectSimulation.ToolActionAxe.Ordering)]
+    public class ToolActionAxe : ToolAction
     {
-        public override ValidationResult Validate(ActionContext ctx)
+        public override ValidationResult Validate(ToolActionContext ctx)
         {
             var vr = new ValidationResult();
             foreach (var cell in ctx.targetCells)
@@ -21,16 +21,12 @@ namespace GGemCo2DSimulation
             return vr;
         }
 
-        public override void Execute(ActionContext ctx)
+        public override void Execute(ToolActionContext ctx)
         {
             foreach (var cell in ctx.targetCells)
             {
                 var tm = ctx.registry.ResolveWriteTarget(ctx.tool.writeRole, cell);
                 if (!tm) continue;
-
-                // 프로젝트 타일셋에서 실제 타일 주입
-                TileBase hoed = ctx.tileset ? ctx.tileset.hoedTile : null;
-                if (hoed) tm.SetTile(cell, hoed);
             }
         }
     }

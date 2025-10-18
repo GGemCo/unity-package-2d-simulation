@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using GGemCo2DCore;
 using UnityEngine;
@@ -9,14 +10,15 @@ namespace GGemCo2DSimulation
     [DisallowMultipleComponent]
     public class AutoTilemapRegistry : MonoBehaviour
     {
-        [Header("Rules (위→아래 순서로 평가)")]
-        public List<TilemapRoleRule> rules = new();
+        // [Header("Rules (위→아래 순서로 평가)")]
+        // public List<TilemapRoleRule> rules = new();
+        private List<TilemapRoleRule> _rules = new List<TilemapRoleRule>();
 
-        [Header("Preview (자동 생성)")]
-        public Material previewMaterial;        // 선택
-        public ConfigSortingLayer.Keys previewSortingLayer = ConfigSortingLayer.Keys.MapTerrain;
-        public int      previewSortingOrder = 999;
-        public string   previewObjectName   = "Tilemap_Preview";
+        // [Header("Preview (자동 생성)")]
+        private Material _previewMaterial;
+        private ConfigSortingLayer.Keys _previewSortingLayer;
+        private int _previewSortingOrder;
+        private string _previewObjectName;
 
         private readonly Dictionary<TileRole, List<Tilemap>> _byRole = new();
 
@@ -27,19 +29,52 @@ namespace GGemCo2DSimulation
         private bool _suppressChildrenChanged;   // 자식 변동 콜백 무시
         private bool _isCreatingPreview;         // 미리보기 생성 중
 
+        private void Awake()
+        {
+            if (!AddressableLoaderSettingsSimulation.Instance)
+            {
+                // GcLogger.LogError($"{nameof(AddressableLoaderSettingsSimulation)} 싱글톤이 없습니다.");
+                return;
+            }
+
+            if (!AddressableLoaderSettingsSimulation.Instance.simulationSettings)
+            {
+                GcLogger.LogError($"{nameof(GGemCoSimulationSettings)} 스크립터블 오브젝트가 없습니다.");
+                return;
+            }
+
+            var simulationSettings = AddressableLoaderSettingsSimulation.Instance.simulationSettings;
+            _rules = simulationSettings.rules;
+            if (_rules == null)
+            {
+                GcLogger.LogError($"{nameof(GGemCoSimulationSettings)} 스크립터블 오브젝트에 Rules가 없습니다.");
+                return;
+            }
+            if (_rules.Count == 0)
+            {
+                GcLogger.LogError($"{nameof(GGemCoSimulationSettings)} 스크립터블 오브젝트에 Rules를 등록해주세요.");
+                return;
+            }
+
+            _previewSortingLayer = simulationSettings.previewSortingLayer;
+            _previewSortingOrder = simulationSettings.previewSortingOrder;
+            _previewObjectName = simulationSettings.previewObjectName;
+        }
+
         public Tilemap GetPreview()
         {
             if (_preview) return _preview;
+            if (_previewObjectName == null) return null;
 
             // 이미 존재하면 재사용 (에디터/런타임 모두 안전)
-            var exist = transform.Find(previewObjectName);
+            var exist = transform.Find(_previewObjectName);
             if (exist)
             {
                 _preview = exist.GetComponent<Tilemap>() ?? exist.gameObject.AddComponent<Tilemap>();
                 var r = exist.GetComponent<TilemapRenderer>() ?? exist.gameObject.AddComponent<TilemapRenderer>();
-                r.sortingLayerName = ConfigSortingLayer.GetValue(previewSortingLayer);
-                r.sortingOrder     = previewSortingOrder;
-                if (previewMaterial) r.material = previewMaterial;
+                r.sortingLayerName = ConfigSortingLayer.GetValue(_previewSortingLayer);
+                r.sortingOrder     = _previewSortingOrder;
+                if (_previewMaterial) r.material = _previewMaterial;
                 return _preview;
             }
 
@@ -48,16 +83,16 @@ namespace GGemCo2DSimulation
             _suppressChildrenChanged = true;
             try
             {
-                var go = new GameObject(previewObjectName)
+                var go = new GameObject(_previewObjectName)
                 {
                     layer = gameObject.layer
                 };
 
                 _preview = go.AddComponent<Tilemap>();
                 var r = go.AddComponent<TilemapRenderer>();
-                r.sortingLayerName = ConfigSortingLayer.GetValue(previewSortingLayer);
-                r.sortingOrder     = previewSortingOrder;
-                if (previewMaterial) r.material = previewMaterial;
+                r.sortingLayerName = ConfigSortingLayer.GetValue(_previewSortingLayer);
+                r.sortingOrder     = _previewSortingOrder;
+                if (_previewMaterial) r.material = _previewMaterial;
                 go.transform.SetParent(transform, false);
                 // Collider 불필요 (미리보기 전용)
             }
@@ -73,7 +108,7 @@ namespace GGemCo2DSimulation
         private IEnumerable<Tilemap> GetByRole(TileRole role)
             => _byRole.TryGetValue(role, out var list) ? list : Enumerable.Empty<Tilemap>();
 
-        private Tilemap GetTop(TileRole role)
+        public Tilemap GetTop(TileRole role)
         {
             Tilemap top = null; var best = int.MinValue;
             foreach (var tm in GetByRole(role))
@@ -87,7 +122,7 @@ namespace GGemCo2DSimulation
 
         public bool AnyTileAt(Vector3Int cell, TileRole mask)
         {
-            foreach (var role in EnumUtil.Flags(mask))
+            foreach (var role in EnumHelper.Flags(mask))
                 foreach (var tm in GetByRole(role))
                     if (tm && tm.HasTile(cell)) return true;
             return false;
@@ -119,7 +154,7 @@ namespace GGemCo2DSimulation
 
                 // Preview 제외
                 tilemaps.RemoveAll(t =>
-                    !t || t == _preview || t.gameObject.name == previewObjectName);
+                    !t || t == _preview || t.gameObject.name == _previewObjectName);
 
                 // 규칙 점수화 → 역할 매핑
                 foreach (var tm in tilemaps)
@@ -127,7 +162,7 @@ namespace GGemCo2DSimulation
                     var go = tm.gameObject;
                     var roleScores = new Dictionary<TileRole, int>();
 
-                    foreach (var rule in rules)
+                    foreach (var rule in _rules)
                     {
                         if (!rule) continue;
                         int s = rule.Score(go);
@@ -175,15 +210,6 @@ namespace GGemCo2DSimulation
 
             // 외부 변경만 재탐색
             Discover();
-        }
-    }
-    /// 간단 Flag 열거 유틸
-    public static class EnumUtil
-    {
-        public static IEnumerable<TileRole> Flags(TileRole mask)
-        {
-            foreach (TileRole v in System.Enum.GetValues(typeof(TileRole)))
-                if (v != TileRole.None && (mask & v) == v) yield return v;
         }
     }
 }

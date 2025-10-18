@@ -5,24 +5,24 @@ namespace GGemCo2DSimulation
 {
     public class GridProbe : MonoBehaviour
     {
-        public Grid grid;
-        public Camera cam;
+        private Grid _grid;
+        private Camera _cam;
 
         private void Awake()
         {
-            grid = GameObject.FindWithTag(ConfigTags.GetValue(ConfigTags.Keys.GridTileMap))?.GetComponent<Grid>();
+            _grid = GameObject.FindWithTag(ConfigTags.GetValue(ConfigTags.Keys.GridTileMap))?.GetComponent<Grid>();
         }
 
         public void Start()
         {
             if (!SceneGame.Instance) return;
-            cam = SceneGame.Instance.mainCamera;
+            _cam = SceneGame.Instance.mainCamera;
         }
 
         public Vector3Int GetCursorCell(Vector2 screenPos)
         {
-            var world = cam.ScreenToWorldPoint(screenPos);
-            return grid.WorldToCell(world);
+            var world = _cam.ScreenToWorldPoint(screenPos);
+            return _grid.WorldToCell(world);
         }
 
         public static bool InRange(Vector3Int a, Vector3Int b, int range, DistanceMetric metric)

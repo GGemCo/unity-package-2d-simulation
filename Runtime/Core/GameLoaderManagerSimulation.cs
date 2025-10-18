@@ -44,6 +44,32 @@ namespace GGemCo2DSimulation
                 getProgress: () => addrSettings.GetLoadProgress()
             );
             sender.Register(step);
+            
+            // Tool Definition Asset
+            var addressableLoaderToolDefinition = Object.FindFirstObjectByType<AddressableLoaderToolDefinition>() ??
+                                               new GameObject("AddressableLoaderToolDefinition")
+                                                   .AddComponent<AddressableLoaderToolDefinition>();
+            step = new AddressableTaskStep(
+                id: "simulation.tool.definition",
+                order: 250,
+                localizedKey: LocalizationConstants.Keys.Loading.TextTypeSettings(),
+                startTask: () => addressableLoaderToolDefinition.LoadPrefabsAsync(),
+                getProgress: () => addressableLoaderToolDefinition.GetPrefabLoadProgress()
+            );
+            sender.Register(step);
+            
+            // 성장 Asset
+            var addressableLoaderGrowth = Object.FindFirstObjectByType<AddressableLoaderGrowth>() ??
+                                          new GameObject("AddressableLoaderGrowth")
+                                              .AddComponent<AddressableLoaderGrowth>();
+            step = new AddressableTaskStep(
+                id: "simulation.growth",
+                order: 260,
+                localizedKey: LocalizationConstants.Keys.Loading.TextTypeSettings(),
+                startTask: () => addressableLoaderGrowth.LoadPrefabsAsync(),
+                getProgress: () => addressableLoaderGrowth.GetPrefabLoadProgress()
+            );
+            sender.Register(step);
         }
     }
 }
