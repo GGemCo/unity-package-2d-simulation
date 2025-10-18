@@ -1,4 +1,4 @@
-﻿namespace GGemCo2DControl
+﻿namespace GGemCo2DSimulation
 {
     public static class ConfigCommonSimulation
     {
