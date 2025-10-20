@@ -20,6 +20,7 @@ namespace GGemCo2DSimulation
         private ControllerTool _controllerTool;
         private CharacterBaseController _ctrl;
         private Camera _cam;
+        private ConfigCommon.FacingDirectionType _facingDirection; 
 
         public bool IsActive { get; private set; }
 
@@ -30,6 +31,11 @@ namespace GGemCo2DSimulation
             _controllerTool = character.GetComponent<ControllerTool>();
             _ctrl = controller;
             _cam = SceneGame.Instance.mainCamera;
+            _facingDirection = ConfigCommon.FacingDirectionType.TwoWay;
+            if (AddressableLoaderSettings.Instance && AddressableLoaderSettings.Instance.settings)
+            {
+                _facingDirection = AddressableLoaderSettings.Instance.settings.facingDirectionType;
+            }
         }
 
         public void Update()
@@ -80,22 +86,40 @@ namespace GGemCo2DSimulation
             {
                 _ch.SetStatusSimulationTool();
                 animName = ICharacterAnimationController.HoeAnim;
-                if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Up)   animName = ICharacterAnimationController.HoeUpAnim;
-                else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down) animName = ICharacterAnimationController.HoeDownAnim;
+                if (_facingDirection == ConfigCommon.FacingDirectionType.FourWay ||
+                    _facingDirection == ConfigCommon.FacingDirectionType.EightWay)
+                {
+                    if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Up)
+                        animName = ICharacterAnimationController.HoeUpAnim;
+                    else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down)
+                        animName = ICharacterAnimationController.HoeDownAnim;
+                }
             }
             else if (_ch.IsEquipAxe())
             {
                 _ch.SetStatusSimulationTool();
                 animName = ICharacterAnimationController.AxeAnim;
-                if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Up)   animName = ICharacterAnimationController.AxeUpAnim;
-                else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down) animName = ICharacterAnimationController.AxeDownAnim;
+                if (_facingDirection == ConfigCommon.FacingDirectionType.FourWay ||
+                    _facingDirection == ConfigCommon.FacingDirectionType.EightWay)
+                {
+                    if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Up)
+                        animName = ICharacterAnimationController.AxeUpAnim;
+                    else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down)
+                        animName = ICharacterAnimationController.AxeDownAnim;
+                }
             }
             else if (_ch.IsEquipWatering())
             {
                 _ch.SetStatusSimulationTool();
                 animName = ICharacterAnimationController.WateringAnim;
-                if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Up)   animName = ICharacterAnimationController.WateringUpAnim;
-                else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down) animName = ICharacterAnimationController.WateringDownAnim;
+                if (_facingDirection == ConfigCommon.FacingDirectionType.FourWay ||
+                    _facingDirection == ConfigCommon.FacingDirectionType.EightWay)
+                {
+                    if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Up)
+                        animName = ICharacterAnimationController.WateringUpAnim;
+                    else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down)
+                        animName = ICharacterAnimationController.WateringDownAnim;
+                }
             }
             else if (_ch.IsEquipSeed())
             {
@@ -108,12 +132,14 @@ namespace GGemCo2DSimulation
                     GcLogger.LogError($"{nameof(UIWindowQuickSlotSimulation)} 윈도우가 없습니다.");
                     return;
                 }
+
                 var icon = uiQuick.GetSelectedIcon();
                 if (icon == null)
                 {
                     GcLogger.LogError("장착된 씨앗이 없습니다.");
                     return;
                 }
+
                 if (!SceneGame.Instance.saveDataManager ||
                     SceneGame.Instance.saveDataManager.QuickSlotSimulation == null)
                 {
@@ -124,14 +150,22 @@ namespace GGemCo2DSimulation
                 // 사전 이벤트(예: 씨앗 UID 알림) 필요하면 발행
                 OnPreUseSeed?.Invoke(icon.uid);
 
-                var result = SceneGame.Instance.saveDataManager.QuickSlotSimulation.MinusItem(icon.slotIndex, icon.uid, 1);
+                var result =
+                    SceneGame.Instance.saveDataManager.QuickSlotSimulation.MinusItem(icon.slotIndex, icon.uid, 1);
                 uiQuick.SetIcons(result);
                 if (result == null || !result.IsSuccess()) return;
 
                 _ch.SetStatusSimulationTool();
                 animName = ICharacterAnimationController.SeedAnim;
-                if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Up)   animName = ICharacterAnimationController.SeedUpAnim;
-                else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down) animName = ICharacterAnimationController.SeedDownAnim;
+
+                if (_facingDirection == ConfigCommon.FacingDirectionType.FourWay ||
+                    _facingDirection == ConfigCommon.FacingDirectionType.EightWay)
+                {
+                    if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Up)
+                        animName = ICharacterAnimationController.SeedUpAnim;
+                    else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down)
+                        animName = ICharacterAnimationController.SeedDownAnim;
+                }
             }
 
             if (!string.IsNullOrEmpty(animName))
