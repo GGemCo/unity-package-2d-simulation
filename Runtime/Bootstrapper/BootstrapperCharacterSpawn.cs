@@ -8,7 +8,6 @@ namespace GGemCo2DSimulation
     /// <summary>
     /// Core의 캐릭터 생성 이벤트를 구독하여 시뮬레이션 툴 처리를 자동 부착
     /// </summary>
-    [DefaultExecutionOrder((int)ConfigCommonSimulation.ExecutionOrdering.Simulation)]
     public class BootstrapperCharacterSpawn : MonoBehaviour
     {
         private void OnEnable()

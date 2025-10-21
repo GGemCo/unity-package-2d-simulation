@@ -7,7 +7,6 @@ namespace GGemCo2DSimulation
     /// <summary>
     /// Core의 캐릭터 생성 이벤트를 구독하여 ControlBase 를 자동 부착
     /// </summary>
-    [DefaultExecutionOrder((int)ConfigCommonSimulation.ExecutionOrdering.Simulation)]
     public class BootstrapperMap : MonoBehaviour
     {
         private void OnEnable()

@@ -9,6 +9,7 @@ namespace GGemCo2DSimulation
     /// Control 패키지의 메인 메니저
     /// SceneGame 과 같은 개념
     /// </summary>
+    [DefaultExecutionOrder((int)ConfigCommon.ExecutionOrdering.Simulation)]
     public class SimulationPackageManager : MonoBehaviour
     {
         public static SimulationPackageManager Instance { get; private set; }
