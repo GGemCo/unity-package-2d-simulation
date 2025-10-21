@@ -1,6 +1,6 @@
 {
 	"name": "com.ggemco.2d.simulation",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"displayName": "GGemCo 2D Simulation",
 	"description": "시뮬레이션 설정, 시간 설정, 작물 키우기등의 조작 관련 패키지",
     "documentationUrl": "https://ggemco.notion.site/216bf593397e800a8f66e70c96aefbc2?v=270bf593397e8007b746000c5b2fca89",
@@ -14,6 +14,11 @@
 		"com.ggemco.2d.core": ">=2.8.0"
 	},
     "samples": [
+      {
+        "displayName": "UIWindows",
+        "description": "UI 윈도우 프리팹 샘플 리소스 입니다.\nAssets/GGemCo 폴더에 모든 파일을 이동 시킨 후 사용해주세요.\n디자인을 변경해서 사용할 수 있습니다.\n현재는 시뮬레이션 옵션 윈도우 패널, 시뮬레이션 퀵슬롯 샘플 리소스만 있습니다.\n시뮬레이션 옵션 윈도우 패널은 Assets/GGemCo/UIWindows/Option 폴더 하위에,\n시뮬레이션 퀵슬롯은 Assets/GGemCo/UIWindow/QuickSlot 폴더 하위에 프리팹을 이동 시킨 후 사용해주세요.",
+        "path": "Samples~/UIWindows"
+      }
     ],
 	"keywords": [
 		"unity"
