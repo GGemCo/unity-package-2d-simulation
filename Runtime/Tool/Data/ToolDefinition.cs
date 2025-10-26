@@ -51,12 +51,12 @@ namespace GGemCo2DSimulation
         [Header("Tile Role Rules (타일 역할 설정)")]
 
         [Tooltip("읽기(대상) 가능한 타일 역할 마스크\n도구가 영향을 줄 수 있는 타일 유형 지정\n예: AnyGround = 모든 땅, GroundHoed 등")]
-        public TileRole readRoles = TileRole.AnyGround;
+        public ConfigCommonSimulation.TileRole readRoles = ConfigCommonSimulation.TileRole.AnyGround;
 
         [Tooltip("차단(불가능) 역할 마스크\n이 역할에 해당하는 타일이 있으면 도구 사용 불가\n예: Blocking = 바위, 벽 등")]
-        public TileRole blockRoles = TileRole.Blocking;
+        public ConfigCommonSimulation.TileRole blockRoles = ConfigCommonSimulation.TileRole.Blocking;
 
         [Tooltip("도구 사용 후 변경될 타일 역할\n예: 괭이 = GroundHoed, 물뿌리개 = GroundWet")]
-        public TileRole writeRole = TileRole.GroundHoed;
+        public ConfigCommonSimulation.TileRole writeRole = ConfigCommonSimulation.TileRole.GroundHoed;
     }
 }

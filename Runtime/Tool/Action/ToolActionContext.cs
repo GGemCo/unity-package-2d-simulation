@@ -22,8 +22,10 @@ namespace GGemCo2DSimulation
         // 런타임 타일 모음(SO/MB)
         public TileBase defaultTileHoe;
         public TileBase defaultTileWet;
+        public TileBase defaultTileEmpty;
 
         // 도구, 씨앗 item Uid
         public int itemUid;
+        public GridInformation gridInformation;
     }
 }

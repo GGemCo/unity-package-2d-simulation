@@ -54,7 +54,7 @@ namespace GGemCo2DSimulation
             SimulationPackageManager.Instance.simulationSaveContributor.UpdateToGridInfo(grindInfo);
 
             var cells = grindInfo.GetAllPositions(ConfigGridInformationKey.KeyHoed);
-            var tilemap = autoTilemapRegistry.GetTop(TileRole.GroundHoed);
+            var tilemap = autoTilemapRegistry.GetTop(ConfigCommonSimulation.TileRole.GroundHoed);
             if (tilemap != null)
             {
                 var hoedTile = AddressableLoaderSettingsSimulation.Instance.simulationSettings.hoedTile;
@@ -69,7 +69,7 @@ namespace GGemCo2DSimulation
                 }
             }
             cells = grindInfo.GetAllPositions(ConfigGridInformationKey.KeyWet);
-            tilemap = autoTilemapRegistry.GetTop(TileRole.GroundWet);
+            tilemap = autoTilemapRegistry.GetTop(ConfigCommonSimulation.TileRole.GroundWet);
             if (tilemap != null)
             {
                 var wetTile = AddressableLoaderSettingsSimulation.Instance.simulationSettings.wetTile;
@@ -86,7 +86,7 @@ namespace GGemCo2DSimulation
 
             cells = grindInfo.GetAllPositions(ConfigGridInformationKey.KeySeedItemUid);
             var tableItem = TableLoaderManager.Instance.TableItem;
-            tilemap = autoTilemapRegistry.GetTop(TileRole.GroundGrowth);
+            tilemap = autoTilemapRegistry.GetTop(ConfigCommonSimulation.TileRole.GroundGrowth);
             if (tilemap != null)
             {
                 foreach (var cell in cells)

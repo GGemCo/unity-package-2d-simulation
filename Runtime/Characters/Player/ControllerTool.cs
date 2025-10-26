@@ -13,6 +13,7 @@ namespace GGemCo2DSimulation
         [Header("Refs")]
         private Transform _user;
         private Grid _grid;
+        private GridInformation _gridInformation;
         private GridProbe _probe;
         private AutoTilemapRegistry _registry;
         private HitLocationVisualizer _visualizer;
@@ -22,6 +23,10 @@ namespace GGemCo2DSimulation
         private ToolDefinition _currentTool;
         // 도구, 씨앗 ItemUid
         private int _currentItemUid;
+        // 손으로 수확하기
+        private ToolDefinition _toolHandHarvest;
+        // 이번 프레임에 채택된 후보(손 수확 또는 장착 도구)
+        private ToolDefinition _activeToolForThisFrame;
         
         // 실제 쓰기 타일 모음
         private bool _alwaysShow = true;
@@ -33,6 +38,7 @@ namespace GGemCo2DSimulation
         private SimulationDirtyTracker _simulationDirtyTracker;
         private TileBase _defaultTileHoe;
         private TileBase _defaultTileWet;
+        private TileBase _defaultTileEmpty;
 
         private void Awake()
         {
@@ -58,6 +64,13 @@ namespace GGemCo2DSimulation
                     GcLogger.LogError(
                         $"GGemCoSimulationSettings 스크립터블 오브젝트에 {nameof(AddressableLoaderSettingsSimulation.Instance.simulationSettings.wetTile)}을 등록해주세요.");
                 }
+                _defaultTileEmpty = AddressableLoaderSettingsSimulation.Instance.simulationSettings.emptyTile;
+                if (!_defaultTileEmpty)
+                {
+                    GcLogger.LogError(
+                        $"GGemCoSimulationSettings 스크립터블 오브젝트에 {nameof(AddressableLoaderSettingsSimulation.Instance.simulationSettings.emptyTile)}을 등록해주세요.");
+                }
+                _toolHandHarvest = AddressableLoaderSettingsSimulation.Instance.simulationSettings.toolHandHarvest;
             }
         }
 
@@ -85,100 +98,137 @@ namespace GGemCo2DSimulation
                 GcLogger.LogError($"{nameof(HitLocationVisualizer)} 스크립트가 없습니다.");
                 return;
             }
-            
-            _grid = GameObject.FindWithTag(ConfigTags.GetValue(ConfigTags.Keys.GridTileMap))?.GetComponent<Grid>();
-            _registry = GameObject.FindWithTag(ConfigTags.GetValue(ConfigTags.Keys.GridTileMap))?.GetComponent<AutoTilemapRegistry>();
+
+            _grid = SceneGame.Instance.mapManager.GetGrid();
+            if (!_grid)
+            {
+                GcLogger.LogError($"{nameof(Grid)}가 없습니다.");
+                return;
+            }
+            _registry = _grid.gameObject.GetComponent<AutoTilemapRegistry>();
+            if (!_registry)
+            {
+                GcLogger.LogError($"Grid 오브젝트에 {nameof(AutoTilemapRegistry)}가 없습니다.");
+                return;
+            }
+            _gridInformation = _grid.gameObject.GetComponent<GridInformation>();
+            if (!_gridInformation)
+            {
+                GcLogger.LogError($"Grid 오브젝트에 {nameof(GridInformation)}가 없습니다.");
+                return;
+            }
             _simulationDirtyTracker = SimulationPackageManager.Instance.simulationDirtyTracker;
         }
 
         private void Update()
         {
-            if (_currentTool == null || !_currentTool.targeting || !_probe || !_registry || !_visualizer || !_grid || !_user)
+            // 공통 전제 검사
+            if (!_probe || !_registry || !_visualizer || !_grid || !_user)
             {
                 _currentToolActionContext = null;
                 _isValid = false;
                 return;
             }
 
-            // 유저가 툴 사용을 시작하면 중지하기
-            if (_player.IsStatusSimulationTool()) return;
+            // UI나 애니메이션 등으로 도구 입력이 막힌 경우
+            if (_player.IsStatusSimulationTool())
+            {
+                return;
+            }
 
-            // 1) 포인터 위치 → 그리드 셀
             var cursor = _probe.GetCursorCell(PositionHelper.GetPointerScreenPosition());
-
-            // 2) 사거리 체크
             var origin = _grid.WorldToCell(_user.position);
-            if (!GridProbe.InRange(origin, cursor, _currentTool.range, _currentTool.metric))
-            {
-                _currentToolActionContext = null;
-                _isValid = false;
 
-                if (_alwaysShow)
-                {
-                    if (_hideWhenMoving && _player.IsStatusRun())
-                    {
-                        _visualizer.Clear();
-                    }
-                    else
-                    {
-                        _visualizer.Apply(new(), new() { cursor });
-                    }
-                }
-                else
-                {
-                    _visualizer.Clear();
-                }
+            _activeToolForThisFrame = null;
+            _currentToolActionContext = null;
+            _isValid = false;
+
+            ValidationResult vr;
+            ToolActionContext ctx;
+
+            // ① 손 수확(선점) 시도
+            if (_toolHandHarvest != null
+                && TryValidateTool(_toolHandHarvest, origin, cursor, out vr, out ctx)
+                && vr.IsValid)
+            {
+                AcceptResult(_toolHandHarvest, vr, ctx);
+                return; // 손 수확이 잡히면 장착 도구로 내려가지 않음
+            }
+
+            // ② 장착 도구 시도(손 수확 실패/부적합 시)
+            if (_currentTool != null
+                && _currentTool.targeting != null
+                && TryValidateTool(_currentTool, origin, cursor, out vr, out ctx))
+            {
+                AcceptResult(_currentTool, vr, ctx);
                 return;
             }
-            
-            // 3) 타게팅/검증
-            var targeting = _currentTool.targeting;
-            var ctx = new ToolActionContext
+
+            // ③ 둘 다 불가 → 미리보기/상태 정리
+            _visualizerBehavior_Invalid(cursor);
+        }
+        private bool TryValidateTool(
+            ToolDefinition tool, Vector3Int origin, Vector3Int cursor,
+            out ValidationResult result, out ToolActionContext ctx)
+        {
+            result = null; ctx = null;
+
+            if (!GridProbe.InRange(origin, cursor, tool.range, tool.metric))
+                return false;
+
+            var targeting = tool.targeting;
+            if (targeting == null) return false;
+
+            ctx = new ToolActionContext
             {
-                user = _user,
-                grid = _grid,
-                originCell = origin,
-                cursorCell = cursor,
-                registry = _registry,
-                probe = _probe,
-                tool = _currentTool,
-                deltaTime = Time.deltaTime,
+                user = _user, grid = _grid,
+                originCell = origin, cursorCell = cursor,
+                registry = _registry, probe = _probe,
+                tool = tool, deltaTime = Time.deltaTime,
                 defaultTileHoe = _defaultTileHoe,
                 defaultTileWet = _defaultTileWet,
+                defaultTileEmpty = _defaultTileEmpty,
                 dirtyTracker = _simulationDirtyTracker,
-                itemUid = _currentItemUid
+                itemUid = _currentItemUid,
+                gridInformation = _gridInformation
             };
+
             var cells = targeting.GetCells(ctx);
             ctx.targetCells = cells;
 
-            var result = _currentTool.action.Validate(ctx);
-            _isValid = result.IsValid;
-            _currentToolActionContext = result.IsValid ? ctx : null;
-            
-            // 4) 미리보기
+            result = tool.action.Validate(ctx);
+            return true; // 검증 자체는 수행했고, 유효성은 result.IsValid로 판단
+        }
+        private void AcceptResult(ToolDefinition picked, ValidationResult vr, ToolActionContext ctx)
+        {
+            _activeToolForThisFrame = picked;
+            _isValid = vr.IsValid;
+            _currentToolActionContext = vr.IsValid ? ctx : null;
+
             if (_alwaysShow)
             {
-                if (_hideWhenMoving && _player.IsStatusRun())
-                {
-                    _visualizer.Clear();
-                }
-                else
-                {
-                    _visualizer.Apply(result.ValidCells, result.InvalidCells);
-                }
+                if (_hideWhenMoving && _player.IsStatusRun()) _visualizer.Clear();
+                else _visualizer.Apply(vr.ValidCells, vr.InvalidCells);
             }
-            else
+            else _visualizer.Clear();
+        }
+        private void _visualizerBehavior_Invalid(Vector3Int cursor)
+        {
+            _isValid = false; _currentToolActionContext = null;
+            if (_alwaysShow)
             {
-                _visualizer.Clear();
+                if (_hideWhenMoving && _player.IsStatusRun()) _visualizer.Clear();
+                else _visualizer.Apply(new(), new() { cursor });
             }
+            else _visualizer.Clear();
         }
         /// <summary>
         /// 도구 사용하기
         /// </summary>
         public void UseTool()
         {
-            if (!_isValid || _currentToolActionContext == null) return;
-            _currentTool.action.Execute(_currentToolActionContext);
+            if (!_isValid || _currentToolActionContext == null || _activeToolForThisFrame == null) return;
+            _activeToolForThisFrame.action.Execute(_currentToolActionContext); // 채택된 툴 실행
         }
 
         public bool IsValid() => _isValid;
@@ -204,6 +254,11 @@ namespace GGemCo2DSimulation
         {
             _currentTool = toolDefinition;
             _currentItemUid = itemUid;
+        }
+
+        public bool IsValidByHandHarvest()
+        {
+            return _activeToolForThisFrame == _toolHandHarvest && _isValid;
         }
     }
 }

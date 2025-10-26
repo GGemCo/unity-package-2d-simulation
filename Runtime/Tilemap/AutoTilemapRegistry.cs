@@ -20,7 +20,7 @@ namespace GGemCo2DSimulation
         private int _previewSortingOrder;
         private string _previewObjectName;
 
-        private readonly Dictionary<TileRole, List<Tilemap>> _byRole = new();
+        private readonly Dictionary<ConfigCommonSimulation.TileRole, List<Tilemap>> _byRole = new();
 
         private Tilemap _preview;
 
@@ -105,10 +105,10 @@ namespace GGemCo2DSimulation
             return _preview;
         }
 
-        private IEnumerable<Tilemap> GetByRole(TileRole role)
+        private IEnumerable<Tilemap> GetByRole(ConfigCommonSimulation.TileRole role)
             => _byRole.TryGetValue(role, out var list) ? list : Enumerable.Empty<Tilemap>();
 
-        public Tilemap GetTop(TileRole role)
+        public Tilemap GetTop(ConfigCommonSimulation.TileRole role)
         {
             Tilemap top = null; var best = int.MinValue;
             foreach (var tm in GetByRole(role))
@@ -120,7 +120,7 @@ namespace GGemCo2DSimulation
             return top;
         }
 
-        public bool AnyTileAt(Vector3Int cell, TileRole mask)
+        public bool AnyTileAt(Vector3Int cell, ConfigCommonSimulation.TileRole mask)
         {
             foreach (var role in EnumHelper.Flags(mask))
                 foreach (var tm in GetByRole(role))
@@ -128,12 +128,12 @@ namespace GGemCo2DSimulation
             return false;
         }
 
-        public Tilemap ResolveWriteTarget(TileRole desiredRole, Vector3Int cell)
+        public Tilemap ResolveWriteTarget(ConfigCommonSimulation.TileRole desiredRole, Vector3Int cell)
         {
             var target = GetTop(desiredRole);
             if (target) return target;
-            if ((desiredRole & TileRole.AnyGround) != 0)
-                return GetTop(TileRole.GroundBase);
+            if ((desiredRole & ConfigCommonSimulation.TileRole.AnyGround) != 0)
+                return GetTop(ConfigCommonSimulation.TileRole.GroundBase);
             return null;
         }
 
@@ -160,7 +160,7 @@ namespace GGemCo2DSimulation
                 foreach (var tm in tilemaps)
                 {
                     var go = tm.gameObject;
-                    var roleScores = new Dictionary<TileRole, int>();
+                    var roleScores = new Dictionary<ConfigCommonSimulation.TileRole, int>();
 
                     foreach (var rule in _rules)
                     {
@@ -174,7 +174,7 @@ namespace GGemCo2DSimulation
 
                     if (roleScores.Count == 0)
                     {
-                        AddRole(TileRole.Decor, tm);
+                        AddRole(ConfigCommonSimulation.TileRole.Decor, tm);
                         continue;
                     }
 
@@ -191,7 +191,7 @@ namespace GGemCo2DSimulation
             }
         }
 
-        private void AddRole(TileRole role, Tilemap tm)
+        private void AddRole(ConfigCommonSimulation.TileRole role, Tilemap tm)
         {
             if (!_byRole.TryGetValue(role, out var list))
             {

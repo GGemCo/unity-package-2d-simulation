@@ -13,7 +13,7 @@ namespace GGemCo2DSimulation
             public Tilemap map;
             public Vector3Int cell;
             public int until;         // 만료 시각(초, int)
-            public TileRole prevRole; // GroundHoed or GroundBase
+            public ConfigCommonSimulation.TileRole prevRole; // GroundHoed or GroundBase
         }
 
         private void Awake() => _instance = this;
@@ -65,7 +65,7 @@ namespace GGemCo2DSimulation
             _simulationDirtyTracker = SimulationPackageManager.Instance.simulationDirtyTracker;
         }
 
-        public void Register(Tilemap map, Vector3Int cell, int until, TileRole prevRole)
+        public void Register(Tilemap map, Vector3Int cell, int until, ConfigCommonSimulation.TileRole prevRole)
         {
             if (!_registry)
             {
@@ -106,7 +106,8 @@ namespace GGemCo2DSimulation
                 if (now < e.until) continue;
 
                 // 복귀 타일 결정
-                var writeMap = _registry.ResolveWriteTarget(TileRole.GroundWet, e.cell) ?? e.map;
+                var writeMap = _registry.ResolveWriteTarget(ConfigCommonSimulation.TileRole.GroundWet, e.cell) ?? e.map;
+                if (writeMap == null) continue;
                 writeMap.SetTile(e.cell, _defaultTileEmpty);
 
                 // 메타 제거

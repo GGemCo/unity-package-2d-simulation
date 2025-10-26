@@ -25,7 +25,7 @@ namespace GGemCo2DSimulation
         {
             if (ctx.defaultTileHoe == null) return;
 
-            var info = ctx.grid.GetComponent<GridInformation>();
+            var info = ctx.gridInformation;
             if (!info)
             {
                 Debug.LogWarning("[WaterAction] GridInformation이 필요합니다.", ctx.grid);

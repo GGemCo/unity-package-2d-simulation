@@ -64,7 +64,7 @@ namespace GGemCo2DSimulation
             if (_ch.IsStatusDead()) return;
 
             // 도구/씨앗 장착 여부
-            if (!_ch.IsEquipSimulationTool() && !_ch.IsEquipSeed()) return;
+            if (!_ch.IsEquipSimulationTool() && !_ch.IsEquipSeed() && !_controllerTool.IsValidByHandHarvest()) return;
             
             // 동작이 가능한 타일인지
             if (_controllerTool && !_controllerTool.IsValid())
@@ -82,7 +82,22 @@ namespace GGemCo2DSimulation
 
             string animName = string.Empty;
 
-            if (_ch.IsEquipHoe())
+            // 손으로 수확할 수 있는 아이템인지 제일 먼저 검사
+            if (_controllerTool.IsValidByHandHarvest())
+            {
+                _ch.SetStatusSimulationTool();
+                animName = ICharacterAnimationController.PickUpAnim;
+
+                if (_facingDirection == ConfigCommon.FacingDirectionType.FourWay ||
+                    _facingDirection == ConfigCommon.FacingDirectionType.EightWay)
+                {
+                    if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Up)
+                        animName = ICharacterAnimationController.PickUpUpAnim;
+                    else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down)
+                        animName = ICharacterAnimationController.PickUpDownAnim;
+                }
+            }
+            else if (_ch.IsEquipHoe())
             {
                 _ch.SetStatusSimulationTool();
                 animName = ICharacterAnimationController.HoeAnim;
@@ -119,6 +134,32 @@ namespace GGemCo2DSimulation
                         animName = ICharacterAnimationController.WateringUpAnim;
                     else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down)
                         animName = ICharacterAnimationController.WateringDownAnim;
+                }
+            }
+            else if (_ch.IsEquipPickAxe())
+            {
+                _ch.SetStatusSimulationTool();
+                animName = ICharacterAnimationController.PickAxeAnim;
+                if (_facingDirection == ConfigCommon.FacingDirectionType.FourWay ||
+                    _facingDirection == ConfigCommon.FacingDirectionType.EightWay)
+                {
+                    if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Up)
+                        animName = ICharacterAnimationController.PickAxeUpAnim;
+                    else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down)
+                        animName = ICharacterAnimationController.PickAxeDownAnim;
+                }
+            }
+            else if (_ch.IsEquipSickle())
+            {
+                _ch.SetStatusSimulationTool();
+                animName = ICharacterAnimationController.SickleAnim;
+                if (_facingDirection == ConfigCommon.FacingDirectionType.FourWay ||
+                    _facingDirection == ConfigCommon.FacingDirectionType.EightWay)
+                {
+                    if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Up)
+                        animName = ICharacterAnimationController.SickleUpAnim;
+                    else if (_ch.CurrentFacing == CharacterConstants.FacingDirection8.Down)
+                        animName = ICharacterAnimationController.SickleDownAnim;
                 }
             }
             else if (_ch.IsEquipSeed())

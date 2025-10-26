@@ -1,11 +1,10 @@
 ﻿using GGemCo2DCore;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 namespace GGemCo2DSimulation
 {
-    [CreateAssetMenu(menuName = ConfigScriptableObjectSimulation.ToolActionAxe.MenuName, order = ConfigScriptableObjectSimulation.ToolActionAxe.Ordering)]
-    public class ToolActionAxe : ToolAction
+    [CreateAssetMenu(menuName = ConfigScriptableObjectSimulation.ToolActionPickAxe.MenuName, order = ConfigScriptableObjectSimulation.ToolActionPickAxe.Ordering)]
+    public class ToolActionPickAxe : ToolAction
     {
         private Collider2D[] _collider2Ds = new Collider2D[10];
         
@@ -49,9 +48,9 @@ namespace GGemCo2DSimulation
                         if (!hit || !hit.CompareTag(ConfigTags.GetValue(ConfigTags.Keys.Npc))) continue;
                         CharacterHitArea characterHitArea = hit.GetComponent<CharacterHitArea>();
                         if (characterHitArea == null) continue;
-
+                    
                         var npc = characterHitArea.target as Npc;
-                        if (npc == null || !npc.IsSubCategoryTree()) continue;
+                        if (npc == null || !npc.IsSubCategoryOre()) continue;
                         // GcLogger.Log($"npc {npc.name}");
                         found++;
                         break;
@@ -82,7 +81,7 @@ namespace GGemCo2DSimulation
             var info = ctx.gridInformation;
             if (!info)
             {
-                Debug.LogWarning("[AxeAction] GridInformation이 필요합니다.", ctx.grid);
+                Debug.LogWarning("[WaterAction] GridInformation이 필요합니다.", ctx.grid);
                 return;
             }
             var user = ctx.user;
@@ -118,7 +117,7 @@ namespace GGemCo2DSimulation
                         if (characterHitArea == null) continue;
                     
                         npc = characterHitArea.target as Npc;
-                        if (npc == null || !npc.IsSubCategoryTree()) continue;
+                        if (npc == null || !npc.IsSubCategoryOre()) continue;
                         // GcLogger.Log($"npc {npc.name}");
                         break;
                     }

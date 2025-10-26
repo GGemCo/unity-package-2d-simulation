@@ -31,7 +31,10 @@ namespace GGemCo2DSimulation
             ToolTargetingSingleCell,
             ToolActionSeed,
             TilemapRoleRule,
-            Growth
+            Growth,
+            ToolActionPickax,
+            ToolActionSickle,
+            ToolActionHandHarvest
         }
         
         public static class SimulationSettings
@@ -65,6 +68,22 @@ namespace GGemCo2DSimulation
         {
             public const string MenuName = PathToolAction + "/Seed";
             public const int Ordering = (int)MenuOrdering.ToolActionSeed;
+        }
+        public static class ToolActionPickAxe
+        {
+            public const string MenuName = PathToolAction + "/PickAxe";
+            public const int Ordering = (int)MenuOrdering.ToolActionPickax;
+        }
+        public static class ToolActionSickle
+        {
+            public const string MenuName = PathToolAction + "/Sickle";
+            public const int Ordering = (int)MenuOrdering.ToolActionSickle;
+        }
+
+        public static class ToolActionHandHarvest
+        {
+            public const string MenuName = PathToolAction + "/HandHarvest";
+            public const int Ordering = (int)MenuOrdering.ToolActionHandHarvest;
         }
         public static class ToolTargetingRect
         {

@@ -13,7 +13,7 @@ namespace GGemCo2DSimulation
             foreach (var cell in ctx.targetCells)
             {
                 // 이미 씨앗이 있으면 false
-                var seedItemUid = ctx.grid.GetComponent<GridInformation>().GetPositionProperty(cell, ConfigGridInformationKey.KeySeedItemUid, -1);
+                var seedItemUid = ctx.gridInformation.GetPositionProperty(cell, ConfigGridInformationKey.KeySeedItemUid, -1);
                 if (seedItemUid != -1)
                 {
                     vr.InvalidCells.Add(cell);
@@ -32,7 +32,7 @@ namespace GGemCo2DSimulation
 
         public override void Execute(ToolActionContext ctx)
         {
-            var info = ctx.grid.GetComponent<GridInformation>();
+            var info = ctx.gridInformation;
             if (!info)
             {
                 Debug.LogWarning("[WaterAction] GridInformation이 필요합니다.", ctx.grid);

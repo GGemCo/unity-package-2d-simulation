@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using GGemCo2DControl;
+﻿using GGemCo2DControl;
 using GGemCo2DCore;
 using UnityEngine;
 
@@ -38,8 +37,18 @@ namespace GGemCo2DSimulation
 #else
 
 #endif
-            // 플레이어 타입이 아니면 return 처리 
-            if (!ch.IsPlayer()) return;
+            // 플레이어 타입이 아니면 return 처리
+            SetPlayerSetting(ch);
+            SetNpcSetting(ch);
+        }
+
+        private void SetNpcSetting(CharacterBase ch)
+        {
+        }
+
+        private void SetPlayerSetting(CharacterBase ch)
+        {
+            if (!ch.IsPlayer()) return; 
             if (ch.GetComponent<GridProbe>() == null)
             {
                 var gridProbe = ch.gameObject.AddComponent<GridProbe>();

@@ -14,7 +14,7 @@ namespace GGemCo2DSimulation
     {
         [Header("Target Role")]
         [Tooltip("이 규칙이 적용될 Tilemap의 역할 (예: Ground, Object, House 등)")]
-        public TileRole role;
+        public ConfigCommonSimulation.TileRole role;
 
         [Header("Name Filter (Regex)")]
         [Tooltip("Tilemap 오브젝트 이름에 매칭될 정규식. 예: (?i)ground|floor")]

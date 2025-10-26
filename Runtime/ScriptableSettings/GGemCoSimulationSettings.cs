@@ -88,29 +88,33 @@ namespace GGemCo2DSimulation
 
         [Tooltip("프리뷰 Tilemap Sorting Order (높을수록 위)")]
         public int previewSortingOrder = 999;
+        
+        [Header("ToolDefinition 디폴트")]
+        [Tooltip("손으로 수확하는 도구")]
+        public ToolDefinition toolHandHarvest;
 
         // ─────────────────────────────────────────────────────────────────────
         // 내부 캐시
         // ─────────────────────────────────────────────────────────────────────
-        private readonly Dictionary<TileRole, TileBase> _cache = new();
+        private readonly Dictionary<ConfigCommonSimulation.TileRole, TileBase> _cache = new();
 
         /// <summary>
         /// Role에 대응하는 타일을 반환합니다.
         /// 우선순위: 커스텀(RoleTile) 지정 타일 → 기본 폴백(hoed/wet/empty) → null
         /// </summary>
-        public TileBase GetTile(TileRole role)
+        public TileBase GetTile(ConfigCommonSimulation.TileRole role)
         {
             if (_cache.TryGetValue(role, out var cached) && cached)
                 return cached;
 
-            if ((role & TileRole.GroundHoed) != 0 && hoedTile)  return Cache(role, hoedTile);
-            if ((role & TileRole.GroundWet)  != 0 && wetTile)   return Cache(role, wetTile);
-            if ((role & TileRole.Empty)      != 0 && emptyTile) return Cache(role, emptyTile);
+            if ((role & ConfigCommonSimulation.TileRole.GroundHoed) != 0 && hoedTile)  return Cache(role, hoedTile);
+            if ((role & ConfigCommonSimulation.TileRole.GroundWet)  != 0 && wetTile)   return Cache(role, wetTile);
+            if ((role & ConfigCommonSimulation.TileRole.Empty)      != 0 && emptyTile) return Cache(role, emptyTile);
 
             return null;
         }
 
-        private TileBase Cache(TileRole role, TileBase tile)
+        private TileBase Cache(ConfigCommonSimulation.TileRole role, TileBase tile)
         {
             if (tile) _cache[role] = tile;
             return tile;

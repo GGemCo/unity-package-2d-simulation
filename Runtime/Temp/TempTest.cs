@@ -18,7 +18,7 @@ namespace GGemCo2DSimulation
             if (grindInfo == null) return;
             var autoTilemapRegistry = grid.GetComponent<AutoTilemapRegistry>();
             if (autoTilemapRegistry == null) return;
-            var tilemap = autoTilemapRegistry.GetTop(TileRole.GroundGrowth);
+            var tilemap = autoTilemapRegistry.GetTop(ConfigCommonSimulation.TileRole.GroundGrowth);
             if (tilemap == null) return;
             var cells = grindInfo.GetAllPositions(ConfigGridInformationKey.KeySeedStep);
             

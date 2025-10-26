@@ -1,6 +1,5 @@
 ﻿using GGemCo2DCore;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 namespace GGemCo2DSimulation
 {
@@ -36,7 +35,7 @@ namespace GGemCo2DSimulation
         {
             if (ctx.defaultTileWet == null) return;
 
-            var info = ctx.grid.GetComponent<GridInformation>();
+            var info = ctx.gridInformation;
             if (!info)
             {
                 Debug.LogWarning("[WaterAction] GridInformation이 필요합니다.", ctx.grid);
@@ -49,12 +48,12 @@ namespace GGemCo2DSimulation
             foreach (var cell in ctx.targetCells)
             {
                 // 1) 이전 역할 기록(갈린 땅 우선, 없으면 기본 땅)
-                TileRole prevRole = ctx.registry.AnyTileAt(cell, TileRole.GroundHoed)
-                    ? TileRole.GroundHoed
-                    : TileRole.GroundBase;
+                ConfigCommonSimulation.TileRole prevRole = ctx.registry.AnyTileAt(cell, ConfigCommonSimulation.TileRole.GroundHoed)
+                    ? ConfigCommonSimulation.TileRole.GroundHoed
+                    : ConfigCommonSimulation.TileRole.GroundBase;
 
                 // 2) 젖은 타일 쓰기
-                var writeMap = ctx.registry.ResolveWriteTarget(TileRole.GroundWet, cell);
+                var writeMap = ctx.registry.ResolveWriteTarget(ConfigCommonSimulation.TileRole.GroundWet, cell);
                 if (!writeMap) continue;
 
                 writeMap.SetTile(cell, ctx.defaultTileWet);
