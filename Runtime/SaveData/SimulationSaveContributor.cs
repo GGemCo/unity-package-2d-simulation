@@ -12,7 +12,7 @@ namespace GGemCo2DSimulation
     /// </summary>
     public sealed class SimulationSaveContributor : ISaveContributor
     {
-        public const string Section = "simulation.gridinfo";
+        private const string Section = "simulation.gridinfo";
         public string SectionKey => Section;
         public int Priority => 200;
 
@@ -22,6 +22,10 @@ namespace GGemCo2DSimulation
         // SimulationDirtyTracker의 "전체 삭제 토큰"과 일치해야 함
         private const string SimulationDirtyTrackerAllKeysToken = "<__ALL__>";
 
+        // 간이 캐시(데모용). 실제 프로젝트에선 별도 클래스로 이전 권장.
+        private static readonly Dictionary<GridInfoSnapshot, Dictionary<Vector3Int, Dictionary<string, GridInfoKV>>> CellsCache
+            = new();
+        
         // 누적 DTO (항상 최신 상태를 보관)
         private readonly SimulationSaveDTO _accumDto = new SimulationSaveDTO
         {
@@ -96,9 +100,9 @@ namespace GGemCo2DSimulation
                 foreach (var key in ConfigGridInformationKey.All)
                 {
                     // 존재하지 않는(혹은 초기값 -1로 간주) 키는 "지움 처리"로 해석 → 누적에서 제거
-                    if (gi.GetPositionProperty(cell, key, -1) == -1)
+                    if (!ConfigGridInformationKey.TryReadWithGet(gi, cell, key, out var kv))
                     {
-                        // 누적에 있으면 제거
+                        // 키가 없거나(또는 삭제 상태) → 누적에서 제거
                         if (cellIndex.TryGetValue(cell, out var kvDict) && kvDict.Remove(key))
                         {
                             RemoveCellIfEmpty(gridSnap, cellIndex, cell);
@@ -106,9 +110,8 @@ namespace GGemCo2DSimulation
                         }
                         continue;
                     }
-
-                    if (TryReadWithGet(gi, cell, key, out var kv))
-                        upserts.Add(kv);
+                    // 키가 존재하면 upsert
+                    upserts.Add(kv);
                 }
 
                 if (upserts.Count == 0) continue;
@@ -263,7 +266,7 @@ namespace GGemCo2DSimulation
             // cells 리스트를 최초 한 번 해시화해서 캐시 (간단 구현을 위해 Tag로 보관)
             // 실제 프로젝트에서는 별도 캐시 필드/클래스로 빼세요.
             if (gridSnap == null) return null;
-            if (_cellsCache.TryGetValue(gridSnap, out var map)) return map;
+            if (CellsCache.TryGetValue(gridSnap, out var map)) return map;
 
             map = new Dictionary<Vector3Int, Dictionary<string, GridInfoKV>>();
             if (gridSnap.cells != null)
@@ -276,7 +279,7 @@ namespace GGemCo2DSimulation
                     map[c.cell] = dict;
                 }
             }
-            _cellsCache[gridSnap] = map;
+            CellsCache[gridSnap] = map;
             return map;
         }
 
@@ -305,78 +308,6 @@ namespace GGemCo2DSimulation
                 });
             }
             return outDto;
-        }
-
-        // 간이 캐시(데모용). 실제 프로젝트에선 별도 클래스로 이전 권장.
-        private static readonly Dictionary<GridInfoSnapshot, Dictionary<Vector3Int, Dictionary<string, GridInfoKV>>> _cellsCache
-            = new();
-
-        private enum TypeHint { Bool, Int, Float, String, Vector3Int, Unknown }
-
-        private static TypeHint GetTypeHint(string key)
-        {
-            switch (key)
-            {
-                case ConfigGridInformationKey.KeyHoed:           return TypeHint.Bool;
-        
-                case ConfigGridInformationKey.KeyWet:            return TypeHint.Bool;
-                case ConfigGridInformationKey.KeyWetUntil:       return TypeHint.Int;
-                case ConfigGridInformationKey.KeyWetPrevRole:    return TypeHint.Int;
-                case ConfigGridInformationKey.KeyWetCount:       return TypeHint.Int;
-                
-                case ConfigGridInformationKey.KeySeedItemUid:    return TypeHint.Int;
-                case ConfigGridInformationKey.KeySeedStep:       return TypeHint.Int;
-                default:               return TypeHint.Unknown;
-            }
-        }
-
-        /// <summary>
-        /// GridInformation의 형식별 오버로드를 사용해 값을 읽고, 누적용 KV를 만든다.
-        /// - bool → int(0/1)로 저장/복원
-        /// - Vector3Int → string("x,y,z")로 저장/복원
-        /// </summary>
-        private static bool TryReadWithGet(GridInformation gi, Vector3Int cell, string key, out GridInfoKV kv)
-        {
-            kv = default;
-
-            switch (GetTypeHint(key))
-            {
-                case TypeHint.Bool:
-                {
-                    int raw = gi.GetPositionProperty(cell, key, 0);
-                    bool v = raw != 0;
-                    kv = new GridInfoKV { key = key, type = "bool", value = v.ToString() };
-                    return true;
-                }
-                case TypeHint.Int:
-                {
-                    int v = gi.GetPositionProperty(cell, key, 0);
-                    kv = new GridInfoKV { key = key, type = "int", value = v.ToString() };
-                    return true;
-                }
-                case TypeHint.Float:
-                {
-                    float v = gi.GetPositionProperty(cell, key, 0f);
-                    kv = new GridInfoKV { key = key, type = "float", value = v.ToString("R") };
-                    return true;
-                }
-                case TypeHint.String:
-                {
-                    string v = gi.GetPositionProperty(cell, key, string.Empty);
-                    kv = new GridInfoKV { key = key, type = "string", value = v ?? string.Empty };
-                    return true;
-                }
-                case TypeHint.Vector3Int:
-                {
-                    // Vector3Int 오버로드 없음 → string 보관
-                    string s = gi.GetPositionProperty(cell, key, string.Empty);
-                    if (string.IsNullOrEmpty(s)) s = "0,0,0";
-                    kv = new GridInfoKV { key = key, type = "Vector3Int", value = s };
-                    return true;
-                }
-                default:
-                    return false;
-            }
         }
     }
 }

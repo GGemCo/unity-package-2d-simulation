@@ -7,13 +7,15 @@ namespace GGemCo2DSimulation
     [CreateAssetMenu(menuName = ConfigScriptableObjectSimulation.ToolActionSeed.MenuName, order = ConfigScriptableObjectSimulation.ToolActionSeed.Ordering)]
     public class ToolActionSeed : ToolAction
     {
+        private GameTimeManager _gameTimeManager;
+        
         public override ValidationResult Validate(ToolActionContext ctx)
         {
             var vr = new ValidationResult();
             foreach (var cell in ctx.targetCells)
             {
                 // 이미 씨앗이 있으면 false
-                var seedItemUid = ctx.gridInformation.GetPositionProperty(cell, ConfigGridInformationKey.KeySeedItemUid, -1);
+                int seedItemUid   = ctx.gridInformation.GetIntSafe(cell, ConfigGridInformationKey.KeySeedItemUid);
                 if (seedItemUid != -1)
                 {
                     vr.InvalidCells.Add(cell);
@@ -38,6 +40,8 @@ namespace GGemCo2DSimulation
                 Debug.LogWarning("[WaterAction] GridInformation이 필요합니다.", ctx.grid);
                 return;
             }
+            if (_gameTimeManager == null)
+                _gameTimeManager = SceneGame.Instance.gameTimeManager;
             
             foreach (var cell in ctx.targetCells)
             {
@@ -60,13 +64,14 @@ namespace GGemCo2DSimulation
                 }
 
                 int startStep = 0;
-                if (startStep >= growthBase.struckGrowthConditions.Count) continue;
+                if (startStep >= growthBase.struckGrowthConditions.Count - 1) continue;
                 
-                TileBase tile = growthBase.struckGrowthConditions[startStep].tile;
+                TileBase tile = growthBase.struckGrowthConditions[startStep].resultTile;
 
                 if (!tile) continue;
                 info.SetPositionProperty(cell, ConfigGridInformationKey.KeySeedStep, startStep);
                 info.SetPositionProperty(cell, ConfigGridInformationKey.KeySeedItemUid, ctx.itemUid);
+                info.SetPositionProperty(cell, ConfigGridInformationKey.KeySeedStartDate, _gameTimeManager.GetNowDateString() );
                 tm.SetTile(cell, tile);
                 ctx.dirtyTracker.MarkDirty(info, cell);
             }

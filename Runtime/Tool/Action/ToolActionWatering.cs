@@ -59,7 +59,7 @@ namespace GGemCo2DSimulation
                 writeMap.SetTile(cell, ctx.defaultTileWet);
 
                 // 3) 만료시각 계산 (Refresh / Extend)
-                int existed = info.GetPositionProperty(cell, ConfigGridInformationKey.KeyWetUntil, -1);
+                int existed   = info.GetIntSafe(cell, ConfigGridInformationKey.KeyWetUntil);
                 int until = (durationMode == DurationMode.Extend && existed > 0)
                     ? existed + add
                     : now + add;
@@ -69,7 +69,7 @@ namespace GGemCo2DSimulation
                 info.SetPositionProperty(cell, ConfigGridInformationKey.KeyWetUntil, until);
                 info.SetPositionProperty(cell, ConfigGridInformationKey.KeyWetPrevRole, (int)prevRole);
                 
-                int countWatering = info.GetPositionProperty(cell, ConfigGridInformationKey.KeyWetCount, -1);
+                int countWatering   = info.GetIntSafe(cell, ConfigGridInformationKey.KeyWetCount);
                 if (countWatering < 0)
                 {
                     countWatering = 1;
@@ -79,7 +79,7 @@ namespace GGemCo2DSimulation
                     countWatering++;
                 }
                 info.SetPositionProperty(cell, ConfigGridInformationKey.KeyWetCount, countWatering);
-
+                GcLogger.Log($"action water: {countWatering}");
                 // 5) 디케이 시스템 등록
                 var decay = WetDecaySystem.TryGetInstance();
                 if (decay != null)

@@ -49,8 +49,22 @@ namespace GGemCo2DSimulation
             simulationSaveContributor = new SimulationSaveContributor(simulationDirtyTracker, this);
             SaveRegistry.Register(simulationSaveContributor);
         }
+
+        private void Start()
+        {
+            if (SceneGame.Instance)
+                SceneGame.Instance.OnSceneGameDestroyed += OnDestroyBySceneGame;
+        }
+
+        private void OnDestroyBySceneGame()
+        {
+            Destroy(gameObject);
+        }
+
         private void OnDestroy()
         {
+            if (SceneGame.Instance) 
+                SceneGame.Instance.OnSceneGameDestroyed -= OnDestroyBySceneGame;
             if (simulationSaveContributor != null)
                 SaveRegistry.Unregister(simulationSaveContributor);
         }

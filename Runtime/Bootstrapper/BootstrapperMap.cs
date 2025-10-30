@@ -9,18 +9,36 @@ namespace GGemCo2DSimulation
     /// </summary>
     public class BootstrapperMap : MonoBehaviour
     {
+        private Grid _grid;
+        private GridInformation _gridInformation;
+        private AutoTilemapRegistry _autoTilemapRegistry;
+        private SimulationSaveContributor _simulationSaveContributor;
+        private SimulationDirtyTracker _simulationDirtyTracker;
+        private TableItem _tableItem;
+        private GameTimeManager _gameTimeManager;
+
+        private void Awake()
+        {
+            if (!TableLoaderManager.Instance) return;
+            _tableItem = TableLoaderManager.Instance.TableItem;
+        }
+
         private void OnEnable()
         {
             MapManager.OnLoadCompleteMap   += OnMapLoadComplete;
             MapManager.OnLoadTilemapCompleteMap   += OnMapLoadTilemapComplete;
         }
 
+        private void Start()
+        {
+            if (SceneGame.Instance && SceneGame.Instance.gameTimeManager)
+                _gameTimeManager = SceneGame.Instance.gameTimeManager;
+        }
         private void OnDisable()
         {
             MapManager.OnLoadCompleteMap   -= OnMapLoadComplete;
             MapManager.OnLoadTilemapCompleteMap   -= OnMapLoadTilemapComplete;
         }
-
         private void OnMapLoadComplete(MapTileCommon mapTileCommon, GameObject gridTileMap)
         {
             if (SceneGame.Instance)
@@ -36,25 +54,43 @@ namespace GGemCo2DSimulation
         {
             // GcLogger.Log($"OnMapLoadTilemapComplete");
             
-            if (!SceneGame.Instance) return;
-            var grid = SceneGame.Instance.mapManager.GetGrid();
-            if (grid == null) return;
-            var grindInfo = grid.GetComponent<GridInformation>();
-            if (grindInfo == null)
+            _grid = gridTileMap.GetComponent<Grid>();
+            if (_grid == null)
             {
-                grindInfo = grid.gameObject.AddComponent<GridInformation>();
+                GcLogger.LogError($"{nameof(Grid)} 컴포넌트가 없습니다.");
+                return;
             }
-            var autoTilemapRegistry = grid.GetComponent<AutoTilemapRegistry>();
-            if (autoTilemapRegistry == null)
+
+            if (!_grid.gameObject.GetComponent<GridInformation>())
             {
-                autoTilemapRegistry = grid.gameObject.AddComponent<AutoTilemapRegistry>();
+                _gridInformation = _grid.gameObject.AddComponent<GridInformation>();
+            
+                // 처음 게임 시작시에만 세이브 데이터 로드 
+                if (_simulationSaveContributor == null)
+                    _simulationSaveContributor = SimulationPackageManager.Instance.simulationSaveContributor;
+                _simulationSaveContributor.UpdateToGridInfo(_gridInformation);
+            }
+
+            if (!_grid.gameObject.GetComponent<AutoTilemapRegistry>())
+                _autoTilemapRegistry = _grid.gameObject.AddComponent<AutoTilemapRegistry>();
+            
+            if (_gridInformation == null)
+            {
+                GcLogger.LogError($"{nameof(GridInformation)} 컴포넌트가 없습니다.");
+                return;
             }
             
-            // 세이브 데이터 로드 
-            SimulationPackageManager.Instance.simulationSaveContributor.UpdateToGridInfo(grindInfo);
+            if (_autoTilemapRegistry == null)
+            {
+                GcLogger.LogError($"{nameof(AutoTilemapRegistry)} 컴포넌트가 없습니다.");
+                return;
+            }
+            
+            if (_simulationDirtyTracker == null)
+                _simulationDirtyTracker = SimulationPackageManager.Instance.simulationDirtyTracker;
 
-            var cells = grindInfo.GetAllPositions(ConfigGridInformationKey.KeyHoed);
-            var tilemap = autoTilemapRegistry.GetTop(ConfigCommonSimulation.TileRole.GroundHoed);
+            var cells = _gridInformation.GetAllPositions(ConfigGridInformationKey.KeyHoed);
+            var tilemap = _autoTilemapRegistry.GetTop(ConfigCommonSimulation.TileRole.GroundHoed);
             if (tilemap != null)
             {
                 var hoedTile = AddressableLoaderSettingsSimulation.Instance.simulationSettings.hoedTile;
@@ -68,8 +104,8 @@ namespace GGemCo2DSimulation
                     tilemap.SetTile(cell, hoedTile);
                 }
             }
-            cells = grindInfo.GetAllPositions(ConfigGridInformationKey.KeyWet);
-            tilemap = autoTilemapRegistry.GetTop(ConfigCommonSimulation.TileRole.GroundWet);
+            cells = _gridInformation.GetAllPositions(ConfigGridInformationKey.KeyWet);
+            tilemap = _autoTilemapRegistry.GetTop(ConfigCommonSimulation.TileRole.GroundWet);
             if (tilemap != null)
             {
                 var wetTile = AddressableLoaderSettingsSimulation.Instance.simulationSettings.wetTile;
@@ -84,15 +120,15 @@ namespace GGemCo2DSimulation
                 }
             }
 
-            cells = grindInfo.GetAllPositions(ConfigGridInformationKey.KeySeedItemUid);
-            var tableItem = TableLoaderManager.Instance.TableItem;
-            tilemap = autoTilemapRegistry.GetTop(ConfigCommonSimulation.TileRole.GroundGrowth);
+            cells = _gridInformation.GetAllPositions(ConfigGridInformationKey.KeySeedItemUid);
+            tilemap = _autoTilemapRegistry.GetTop(ConfigCommonSimulation.TileRole.GroundGrowth);
             if (tilemap != null)
             {
                 foreach (var cell in cells)
                 {
-                    int itemUid = grindInfo.GetPositionProperty(cell, ConfigGridInformationKey.KeySeedItemUid, -1);
-                    int seedStep = grindInfo.GetPositionProperty(cell, ConfigGridInformationKey.KeySeedStep, -1);
+                    int itemUid   = _gridInformation.GetIntSafe(cell, ConfigGridInformationKey.KeySeedItemUid);
+                    int seedStep  = _gridInformation.GetIntSafe(cell, ConfigGridInformationKey.KeySeedStep);
+                    int countWater= _gridInformation.GetIntSafe(cell, ConfigGridInformationKey.KeyWetCount);
                     if (itemUid <= 0)
                     {
                         GcLogger.LogError($"Cell 정보에 저장된 Seed 아이템 Uid가 {itemUid} 입니다.");
@@ -105,7 +141,7 @@ namespace GGemCo2DSimulation
                         continue;
                     }
 
-                    var item = tableItem.GetDataByUid(itemUid);
+                    var item = _tableItem.GetDataByUid(itemUid);
                     if (item == null)
                     {
                         continue;
@@ -119,15 +155,24 @@ namespace GGemCo2DSimulation
                             $"Addressables에 {key} 키로 등록된 GrowthBase 스크립터블 오브젝트가 없습니다. itemUid: {item.Uid}");
                         continue;
                     }
-
-                    if (seedStep >= growthBase.struckGrowthConditions.Count)
+                    
+                    GcLogger.Log($"seed current step: {seedStep}");
+                    var next = seedStep + 1;
+                    if (GrowthEvaluator.TryFindNextGrowableStep(growthBase, _gridInformation, cell,
+                            next, out var nextStep, out var reason))
                     {
-                        GcLogger.LogError($"최대 Step입니다. itemUid: {item.Uid}, Seed Step:{seedStep}");
-                        continue;
+                        GrowthEvaluator.ApplyStep(growthBase, tilemap, _gridInformation, cell, nextStep, _simulationDirtyTracker);
+                        // 물주기 초기화 하기
+                        _gridInformation.ErasePositionProperty(cell, ConfigGridInformationKey.KeyWetCount);
+                        // 심는 날짜 업데이트
+                        _gridInformation.SetPositionProperty(cell, ConfigGridInformationKey.KeySeedStartDate, _gameTimeManager.GetNowDateString() );
                     }
-
-                    TileBase tile = growthBase.struckGrowthConditions[seedStep].tile;
-                    tilemap.SetTile(cell, tile);
+                    else
+                    {
+                        TileBase tile = growthBase.struckGrowthConditions[seedStep].resultTile;
+                        tilemap.SetTile(cell, tile);
+                        GcLogger.Log($"reason: {reason}");
+                    }
                 }
             }
         }

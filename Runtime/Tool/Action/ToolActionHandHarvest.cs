@@ -21,8 +21,8 @@ namespace GGemCo2DSimulation
                 bool hasGround = ctx.registry.AnyTileAt(cell, ctx.tool.readRoles);
                 if (!blocked && hasGround)
                 {
-                    var seedItemUid = ctx.gridInformation.GetPositionProperty(cell, ConfigGridInformationKey.KeySeedItemUid, -1);
-                    var seedStep = ctx.gridInformation.GetPositionProperty(cell, ConfigGridInformationKey.KeySeedStep, -1);
+                    int seedItemUid   = ctx.gridInformation.GetIntSafe(cell, ConfigGridInformationKey.KeySeedItemUid);
+                    int seedStep   = ctx.gridInformation.GetIntSafe(cell, ConfigGridInformationKey.KeySeedStep);
                     if (seedItemUid != -1 && seedStep != -1)
                     {
                         var info = _tableItem.GetDataByUid(seedItemUid);
@@ -80,8 +80,9 @@ namespace GGemCo2DSimulation
                 var tm = ctx.registry.ResolveWriteTarget(ctx.tool.writeRole, cell);
                 if (!tm) continue;
 
-                var seedItemUid = ctx.gridInformation.GetPositionProperty(cell, ConfigGridInformationKey.KeySeedItemUid, -1);
-                var seedStep = ctx.gridInformation.GetPositionProperty(cell, ConfigGridInformationKey.KeySeedStep, -1);
+                int seedItemUid   = info.GetIntSafe(cell, ConfigGridInformationKey.KeySeedItemUid);
+                int seedStep   = info.GetIntSafe(cell, ConfigGridInformationKey.KeySeedStep);
+                
                 if (seedItemUid == -1 || seedStep == -1) continue;
                 var infoItem = _tableItem.GetDataByUid(seedItemUid);
                 if (!infoItem.IsSubCategoryHandHarvestable()) continue;
@@ -98,7 +99,7 @@ namespace GGemCo2DSimulation
 
                 if (seedStep < growthBase.struckGrowthConditions.Count - 1)
                 {
-                    GcLogger.LogError($"아직 다 성장하지 않았습니다. 씨앗 item Uid: {seedItemUid}, seedStep: {seedStep} < Count: {growthBase.struckGrowthConditions.Count}");
+                    GcLogger.LogError($"아직 다 성장하지 않았습니다. 씨앗 item Uid: {seedItemUid}, seedStep: {seedStep} < Count: {growthBase.struckGrowthConditions.Count - 1}");
                     return;
                 }
 
@@ -111,9 +112,15 @@ namespace GGemCo2DSimulation
                 info.ErasePositionProperty(cell, ConfigGridInformationKey.KeySeedItemUid);
                 info.ErasePositionProperty(cell, ConfigGridInformationKey.KeySeedStep);
                 info.ErasePositionProperty(cell, ConfigGridInformationKey.KeyWet);
+                info.ErasePositionProperty(cell, ConfigGridInformationKey.KeySeedStartDate);
+                info.ErasePositionProperty(cell, ConfigGridInformationKey.KeyWetPrevRole);
+                info.ErasePositionProperty(cell, ConfigGridInformationKey.KeyWetUntil);
                 ctx.dirtyTracker.MarkErased(info, cell, ConfigGridInformationKey.KeySeedItemUid);
                 ctx.dirtyTracker.MarkErased(info, cell, ConfigGridInformationKey.KeySeedStep);
                 ctx.dirtyTracker.MarkErased(info, cell, ConfigGridInformationKey.KeyWet);
+                ctx.dirtyTracker.MarkErased(info, cell, ConfigGridInformationKey.KeySeedStartDate);
+                ctx.dirtyTracker.MarkErased(info, cell, ConfigGridInformationKey.KeyWetPrevRole);
+                ctx.dirtyTracker.MarkErased(info, cell, ConfigGridInformationKey.KeyWetUntil);
                 
                 Vector2 point = ctx.grid.GetCellCenterWorld(cell);
                 SceneGame.Instance.ItemManager.MakeDropItem(point, growthBase.resultUid, 1);
