@@ -29,12 +29,12 @@ namespace GGemCo2DSimulation
         // 누적 DTO (항상 최신 상태를 보관)
         private readonly SimulationSaveDTO _accumDto = new SimulationSaveDTO
         {
-            version = 1,
-            grids = new List<GridInfoSnapshot>()
+            version = 2,
+            grids = new Dictionary<int, List<GridInfoSnapshot>>()
         };
 
         // gridPath → snapshot 인덱스(빠른 접근용)
-        private readonly Dictionary<string, GridInfoSnapshot> _gridIndex = new();
+        private readonly Dictionary<int, Dictionary<string, GridInfoSnapshot>> _gridIndex = new();
 
         public SimulationSaveContributor(SimulationDirtyTracker dirty, SimulationPackageManager manager)
         {
@@ -56,9 +56,10 @@ namespace GGemCo2DSimulation
 
             var gi = SceneGame.Instance.mapManager.GetGridInformation();
             if (!gi) return;
+            int mapUid = SceneGame.Instance.mapManager.GetCurrentMapUid();
 
             var gridPath = gi.gameObject.GetHierarchyPath();
-            var gridSnap = EnsureGridSnapshot(gridPath);
+            var gridSnap = EnsureGridSnapshot(gridPath, mapUid);
             var cellIndex = EnsureCellIndex(gridSnap);
 
             // ---------- [1] ERASE 우선 처리 ----------
@@ -128,7 +129,12 @@ namespace GGemCo2DSimulation
             }
 
             // Dirty가 처리됐으면 비우기
-            if (anyChanged) _dirty.Clear(gi);
+            if (anyChanged)
+            {
+                _dirty.Clear(gi);
+                // 인덱스 → 스냅샷 리스트로 즉시 반영하여 _accumDto를 최신으로 맞춤
+                SyncSnapshotCellsFromIndex(gridSnap);
+            }
 
             // ---------- [3] 항상 누적본 전체를 전달 ----------
             env.SetSection(Section, BuildDtoFromIndex());
@@ -164,9 +170,41 @@ namespace GGemCo2DSimulation
             
             ClearAccumulated();
             // 1) DTO -> 누적 인덱스 채우기
-            foreach (var g in dto.grids)
+            foreach (var grids in dto.grids)
             {
-                var snap = EnsureGridSnapshot(g.gridPath);
+                int mapUid = grids.Key;
+                foreach (var g in grids.Value)
+                {
+                    var snap = EnsureGridSnapshot(g.gridPath, mapUid);
+                    var cellIndex = EnsureCellIndex(snap);
+
+                    if (g.cells == null) continue;
+                    foreach (var c in g.cells)
+                    {
+                        if (!cellIndex.TryGetValue(c.cell, out var kvDict))
+                        {
+                            kvDict = new Dictionary<string, GridInfoKV>();
+                            cellIndex[c.cell] = kvDict;
+                        }
+                        if (c.entries == null) continue;
+                        foreach (var e in c.entries)
+                            kvDict[e.key] = e;
+                    }
+                }
+            
+                // 2) 인덱스에서 snap.cells 재구성 (여기 빠지면 snap.cells가 비어있음)
+                foreach (var snap in _accumDto.grids.GetValueOrDefault(mapUid,  new List<GridInfoSnapshot>()))
+                    SyncSnapshotCellsFromIndex(snap);
+            }
+        }
+
+        public void Restore()
+        {
+            // ClearAccumulated();
+            int mapUid = SceneGame.Instance.mapManager.GetCurrentMapUid();
+            foreach (var g in _accumDto.grids.GetValueOrDefault(mapUid,  new List<GridInfoSnapshot>()))
+            {
+                var snap = EnsureGridSnapshot(g.gridPath, mapUid);
                 var cellIndex = EnsureCellIndex(snap);
 
                 if (g.cells == null) continue;
@@ -184,14 +222,15 @@ namespace GGemCo2DSimulation
             }
             
             // 2) 인덱스에서 snap.cells 재구성 (여기 빠지면 snap.cells가 비어있음)
-            foreach (var snap in _accumDto.grids)
+            foreach (var snap in _accumDto.grids.GetValueOrDefault(mapUid,  new List<GridInfoSnapshot>()))
                 SyncSnapshotCellsFromIndex(snap);
         }
-        
+
         public void UpdateToGridInfo(GridInformation gridInformation)
         {
+            int mapUid = SceneGame.Instance.mapManager.GetCurrentMapUid();
             // 3) 실제 GridInformation에도 반영 (이제 snap.cells 사용 가능)
-            foreach (var snap in _accumDto.grids)
+            foreach (var snap in _accumDto.grids.GetValueOrDefault(mapUid, new List<GridInfoSnapshot>()))
             {
                 if (!gridInformation || snap.cells == null) continue;
 
@@ -249,13 +288,24 @@ namespace GGemCo2DSimulation
                 });
             }
         }
-        private GridInfoSnapshot EnsureGridSnapshot(string gridPath)
+        private GridInfoSnapshot EnsureGridSnapshot(string gridPath, int mapUid)
         {
-            if (!_gridIndex.TryGetValue(gridPath, out var snap))
+            var infoSnapshots = _gridIndex.GetValueOrDefault(mapUid);
+            if (infoSnapshots == null)
+            {
+                _gridIndex.TryAdd(mapUid, new Dictionary<string, GridInfoSnapshot>());
+            }
+            var gridInfoSnapshots = _gridIndex.GetValueOrDefault(mapUid);
+            if (!gridInfoSnapshots.TryGetValue(gridPath, out var snap))
             {
                 snap = new GridInfoSnapshot { gridPath = gridPath, cells = new List<CellInfo>() };
-                _accumDto.grids.Add(snap);
-                _gridIndex[gridPath] = snap;
+                var grid = _accumDto.grids.GetValueOrDefault(mapUid);
+                if (grid == null)
+                {
+                    _accumDto.grids.TryAdd(mapUid, new List<GridInfoSnapshot>());
+                }
+                _accumDto.grids.GetValueOrDefault(mapUid).Add(snap);
+                gridInfoSnapshots[gridPath] = snap;
             }
             return snap;
         }
@@ -288,24 +338,42 @@ namespace GGemCo2DSimulation
         {
             // 이미 _accumDto는 인덱스 기반으로 관리되고 있으므로,
             // 최신 인덱스를 리스트 형태로 재구성해 반환
-            var outDto = new SimulationSaveDTO { version = _accumDto.version, grids = new List<GridInfoSnapshot>(_accumDto.grids.Count) };
-
-            foreach (var g in _accumDto.grids)
+            var outDto = new SimulationSaveDTO
             {
-                var cellIndex = EnsureCellIndex(g);
-                var cellsOut = new List<CellInfo>(cellIndex.Count);
-                foreach (var kv in cellIndex)
+                version = _accumDto.version, 
+                grids = new Dictionary<int, List<GridInfoSnapshot>>(_accumDto.grids.Count)
+            };
+
+            foreach (var pair in _accumDto.grids)
+            {
+                int mapUid = pair.Key;
+                var sourceList = pair.Value; // 누적 스냅샷들
+
+                // 목적지 리스트 확보
+                if (!outDto.grids.TryGetValue(mapUid, out var destList))
                 {
-                    var entriesOut = new List<GridInfoKV>(kv.Value.Count);
-                    foreach (var e in kv.Value.Values) entriesOut.Add(e);
-                    cellsOut.Add(new CellInfo { cell = kv.Key, entries = entriesOut });
+                    destList = new List<GridInfoSnapshot>(sourceList.Count);
+                    outDto.grids[mapUid] = destList;
                 }
 
-                outDto.grids.Add(new GridInfoSnapshot
+                foreach (var g in sourceList)
                 {
-                    gridPath = g.gridPath,
-                    cells = cellsOut
-                });
+                    var cellIndex = EnsureCellIndex(g);
+
+                    var cellsOut = new List<CellInfo>(cellIndex.Count);
+                    foreach (var kv in cellIndex)
+                    {
+                        var entriesOut = new List<GridInfoKV>(kv.Value.Count);
+                        foreach (var e in kv.Value.Values) entriesOut.Add(e);
+                        cellsOut.Add(new CellInfo { cell = kv.Key, entries = entriesOut });
+                    }
+
+                    destList.Add(new GridInfoSnapshot
+                    {
+                        gridPath = g.gridPath,
+                        cells = cellsOut
+                    });
+                }
             }
             return outDto;
         }

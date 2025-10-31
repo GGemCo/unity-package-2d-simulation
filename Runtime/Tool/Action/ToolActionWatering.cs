@@ -14,6 +14,7 @@ namespace GGemCo2DSimulation
         [Tooltip("같은 셀을 다시 물 줄 때 처리 방식: Refresh(만료시각 갱신) / Extend(기존에 더해 연장)")]
         public DurationMode durationMode = DurationMode.Refresh;
         
+        private GameTimeManager _gameTimeManager;
         public override ValidationResult Validate(ToolActionContext ctx)
         {
             var vr = new ValidationResult();
@@ -41,6 +42,8 @@ namespace GGemCo2DSimulation
                 Debug.LogWarning("[WaterAction] GridInformation이 필요합니다.", ctx.grid);
                 return;
             }
+            if (_gameTimeManager == null)
+                _gameTimeManager = SceneGame.Instance.gameTimeManager;
 
             int now = NowSecondsInt();
             int add = Mathf.CeilToInt(wetDurationSeconds);
@@ -79,6 +82,8 @@ namespace GGemCo2DSimulation
                     countWatering++;
                 }
                 info.SetPositionProperty(cell, ConfigGridInformationKey.KeyWetCount, countWatering);
+                info.SetPositionProperty(cell, ConfigGridInformationKey.KeySeedStartDate,_gameTimeManager.GetNowDateString());
+                
                 GcLogger.Log($"action water: {countWatering}");
                 // 5) 디케이 시스템 등록
                 var decay = WetDecaySystem.TryGetInstance();

@@ -15,8 +15,6 @@
             Empty         = 1 << 6,   // 안보이는 비어있는 상태  
             Preview       = 1 << 7,   // 미리보기 전용(런타임 생성/캐싱)
             GroundGrass   = 1 << 8,   // 잔디
-            Tree          = 1 << 9,   // 나무
-            Ore           = 1 << 10,   // 광물
             AnyGround     = GroundBase | GroundHoed | GroundWet | GroundGrass,
         }
     }

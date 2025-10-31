@@ -47,7 +47,6 @@ namespace GGemCo2DSimulation
             
             // Core에 저장 기여자 등록
             simulationSaveContributor = new SimulationSaveContributor(simulationDirtyTracker, this);
-            SaveRegistry.Register(simulationSaveContributor);
         }
 
         private void Start()

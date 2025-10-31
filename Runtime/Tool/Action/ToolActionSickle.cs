@@ -111,9 +111,11 @@ namespace GGemCo2DSimulation
                 
                 info.ErasePositionProperty(cell, ConfigGridInformationKey.KeySeedItemUid);
                 info.ErasePositionProperty(cell, ConfigGridInformationKey.KeySeedStep);
+                info.ErasePositionProperty(cell, ConfigGridInformationKey.KeySeedStartDate);
                 info.ErasePositionProperty(cell, ConfigGridInformationKey.KeyWet);
                 ctx.dirtyTracker.MarkErased(info, cell, ConfigGridInformationKey.KeySeedItemUid);
                 ctx.dirtyTracker.MarkErased(info, cell, ConfigGridInformationKey.KeySeedStep);
+                ctx.dirtyTracker.MarkErased(info, cell, ConfigGridInformationKey.KeySeedStartDate);
                 ctx.dirtyTracker.MarkErased(info, cell, ConfigGridInformationKey.KeyWet);
                 
                 Vector2 point = ctx.grid.GetCellCenterWorld(cell);

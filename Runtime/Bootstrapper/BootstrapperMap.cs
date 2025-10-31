@@ -61,30 +61,38 @@ namespace GGemCo2DSimulation
                 return;
             }
 
-            if (!_grid.gameObject.GetComponent<GridInformation>())
-            {
-                _gridInformation = _grid.gameObject.AddComponent<GridInformation>();
-            
-                // 처음 게임 시작시에만 세이브 데이터 로드 
-                if (_simulationSaveContributor == null)
-                    _simulationSaveContributor = SimulationPackageManager.Instance.simulationSaveContributor;
-                _simulationSaveContributor.UpdateToGridInfo(_gridInformation);
-            }
-
             if (!_grid.gameObject.GetComponent<AutoTilemapRegistry>())
                 _autoTilemapRegistry = _grid.gameObject.AddComponent<AutoTilemapRegistry>();
-            
-            if (_gridInformation == null)
-            {
-                GcLogger.LogError($"{nameof(GridInformation)} 컴포넌트가 없습니다.");
-                return;
-            }
             
             if (_autoTilemapRegistry == null)
             {
                 GcLogger.LogError($"{nameof(AutoTilemapRegistry)} 컴포넌트가 없습니다.");
                 return;
             }
+
+            _gridInformation = _grid.gameObject.GetComponent<GridInformation>();
+            if (_gridInformation == null)
+            {
+                _gridInformation = _grid.gameObject.AddComponent<GridInformation>();
+                if (_gridInformation == null)
+                {
+                    GcLogger.LogError($"{nameof(GridInformation)} 컴포넌트가 없습니다.");
+                    return;
+                }
+                
+                // 처음 게임 시작시에만 세이브 데이터 로드 
+                if (_simulationSaveContributor == null)
+                    _simulationSaveContributor = SimulationPackageManager.Instance.simulationSaveContributor;
+                SaveRegistry.Register(_simulationSaveContributor);
+            }
+            else
+            {
+                // 기존 정보를 지우고
+                _gridInformation.Reset();
+                // 현재 맵의 Grid Information을 불러오기
+                _simulationSaveContributor.Restore();
+            }
+            _simulationSaveContributor.UpdateToGridInfo(_gridInformation);
             
             if (_simulationDirtyTracker == null)
                 _simulationDirtyTracker = SimulationPackageManager.Instance.simulationDirtyTracker;
@@ -156,7 +164,7 @@ namespace GGemCo2DSimulation
                         continue;
                     }
                     
-                    GcLogger.Log($"seed current step: {seedStep}");
+                    // GcLogger.Log($"seed current step: {seedStep}");
                     var next = seedStep + 1;
                     if (GrowthEvaluator.TryFindNextGrowableStep(growthBase, _gridInformation, cell,
                             next, out var nextStep, out var reason))
@@ -164,14 +172,17 @@ namespace GGemCo2DSimulation
                         GrowthEvaluator.ApplyStep(growthBase, tilemap, _gridInformation, cell, nextStep, _simulationDirtyTracker);
                         // 물주기 초기화 하기
                         _gridInformation.ErasePositionProperty(cell, ConfigGridInformationKey.KeyWetCount);
+                        _simulationDirtyTracker.MarkErased(_gridInformation, cell, ConfigGridInformationKey.KeyWetCount);
                         // 심는 날짜 업데이트
                         _gridInformation.SetPositionProperty(cell, ConfigGridInformationKey.KeySeedStartDate, _gameTimeManager.GetNowDateString() );
+                        _simulationDirtyTracker.MarkDirty(_gridInformation, cell);
+                        // GcLogger.Log($"seed step up ok: {next}");
                     }
                     else
                     {
                         TileBase tile = growthBase.struckGrowthConditions[seedStep].resultTile;
                         tilemap.SetTile(cell, tile);
-                        GcLogger.Log($"reason: {reason}");
+                        // GcLogger.Log($"reason: {reason}");
                     }
                 }
             }

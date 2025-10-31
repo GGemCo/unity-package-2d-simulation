@@ -60,7 +60,8 @@ namespace GGemCo2DSimulation
             {
                 case TypeHint.Bool:
                 {
-                    int raw = gi.GetPositionProperty(cell, key, 0);
+                    int raw = gi.GetPositionProperty(cell, key, -1);
+                    if (raw == -1) return false;
                     bool v = raw != 0;
                     kv = new GridInfoKV { key = key, type = "bool", value = v.ToString() };
                     return true;
@@ -68,26 +69,29 @@ namespace GGemCo2DSimulation
                 case TypeHint.Int:
                 {
                     int v = gi.GetPositionProperty(cell, key, -1);
+                    if (v == -1) return false;
                     kv = new GridInfoKV { key = key, type = "int", value = v.ToString() };
                     return true;
                 }
                 case TypeHint.Float:
                 {
                     float v = gi.GetPositionProperty(cell, key, -1f);
+                    if (Mathf.Approximately(v, -1)) return false;
                     kv = new GridInfoKV { key = key, type = "float", value = v.ToString("R") };
                     return true;
                 }
                 case TypeHint.String:
                 {
-                    string v = gi.GetPositionProperty(cell, key, string.Empty);
+                    string v = gi.GetPositionProperty(cell, key, "-1");
+                    if (v == "-1") return false;
                     kv = new GridInfoKV { key = key, type = "string", value = v ?? string.Empty };
                     return true;
                 }
                 case TypeHint.Vector3Int:
                 {
                     // Vector3Int 오버로드 없음 → string 보관
-                    string s = gi.GetPositionProperty(cell, key, string.Empty);
-                    if (string.IsNullOrEmpty(s)) s = "0,0,0";
+                    string s = gi.GetPositionProperty(cell, key, "-1");
+                    if (s == "-1") return false;
                     kv = new GridInfoKV { key = key, type = "Vector3Int", value = s };
                     return true;
                 }

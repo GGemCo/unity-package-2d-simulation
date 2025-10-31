@@ -30,6 +30,6 @@ namespace GGemCo2DSimulation
     public class SimulationSaveDTO
     {
         public int version;
-        public List<GridInfoSnapshot> grids;
+        public Dictionary<int, List<GridInfoSnapshot>> grids;
     }
 }
