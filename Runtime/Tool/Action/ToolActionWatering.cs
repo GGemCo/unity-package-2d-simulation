@@ -84,7 +84,7 @@ namespace GGemCo2DSimulation
                 info.SetPositionProperty(cell, ConfigGridInformationKey.KeyWetCount, countWatering);
                 info.SetPositionProperty(cell, ConfigGridInformationKey.KeySeedStartDate,_gameTimeManager.GetNowDateString());
                 
-                GcLogger.Log($"action water: {countWatering}");
+                // GcLogger.Log($"action water: {countWatering}");
                 // 5) 디케이 시스템 등록
                 var decay = WetDecaySystem.TryGetInstance();
                 if (decay != null)

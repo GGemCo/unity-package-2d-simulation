@@ -143,7 +143,7 @@ namespace GGemCo2DSimulation
                     return true;
             }
 
-            GcLogger.Log($"{label} (current: {current} / needValue:{need.value})");
+            // GcLogger.Log($"{label} (current: {current} / needValue:{need.value})");
             if (current < need.value)
             {
                 message = $"{label} need not met. (current: {current} / needValue: {need.value})";
