@@ -1,13 +1,15 @@
 ﻿using GGemCo2DCore;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 namespace GGemCo2DSimulation
 {
     [CreateAssetMenu(menuName = ConfigScriptableObjectSimulation.ToolActionAxe.MenuName, order = ConfigScriptableObjectSimulation.ToolActionAxe.Ordering)]
     public class ToolActionAxe : ToolAction
     {
-        private Collider2D[] _collider2Ds = new Collider2D[10];
+        [Tooltip("공격력")]
+        public int atk = 1;
+        
+        private readonly Collider2D[] _collider2Ds = new Collider2D[10];
         
         /// <summary>
         /// Tool definition에서 먼저 range, metric에 해당하는 셀일 경우 호출 된다
@@ -129,7 +131,7 @@ namespace GGemCo2DSimulation
             MetadataDamage metadataDamage = new MetadataDamage
             {
                 damageType = SkillConstants.DamageType.Physic,
-                damage = 1,
+                damage = atk != 0 ? atk: 1,
                 attacker = user.gameObject
             };
             npc.TakeDamage(metadataDamage);
