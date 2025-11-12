@@ -47,7 +47,7 @@ namespace GGemCo2DSimulationEditor
             bool result = EditorUtility.DisplayDialog(TextDisplayDialogTitle, TextDisplayDialogMessage, "네", "아니요");
             if (!result) return;
             
-            Dictionary<int, Dictionary<string, string>> dictionary = _addressableEditorSimulation.tableSimulationTool.GetDatas();
+            Dictionary<int, StruckTableSimulationTool> dictionary = _addressableEditorSimulation.tableSimulationTool.GetDatas();
             
             // AddressableSettings 가져오기 (없으면 생성)
             AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
@@ -69,9 +69,9 @@ namespace GGemCo2DSimulationEditor
             ClearGroupEntries(settings, group);
 
             // foreach 문을 사용하여 딕셔너리 내용을 출력
-            foreach (KeyValuePair<int, Dictionary<string, string>> outerPair in dictionary)
+            foreach (KeyValuePair<int, StruckTableSimulationTool> outerPair in dictionary)
             {
-                var info = _addressableEditorSimulation.tableSimulationTool.GetDataByUid(outerPair.Key);
+                var info = outerPair.Value;
                 if (info.Uid <= 0 || info.ItemUid <= 0 || string.IsNullOrEmpty(info.DefinitionFileName)) continue;
 
                 string path = $"{ConfigAddressablePath.Simulation.ToolDefinition}/{info.DefinitionFileName}.asset";
