@@ -33,7 +33,7 @@ namespace GGemCo2DSimulationEditor
         }
         private void DrawRequiredSection()
         {
-            Common.OnGUITitle("필수 항목");
+            HelperEditorUI.OnGUITitle("필수 항목");
             EditorGUILayout.HelpBox($"* GameLoaderManagerSimulation 오브젝트\n", MessageType.Info);
             if (GUILayout.Button("필수 항목 셋팅하기"))
             {

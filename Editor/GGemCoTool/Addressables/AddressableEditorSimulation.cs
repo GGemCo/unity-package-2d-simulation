@@ -38,8 +38,8 @@ namespace GGemCo2DSimulationEditor
 
         private void LoadTables()
         {
-            tableSimulationTool = TableLoaderManager.LoadSimulationToolTable();
-            tableSimulationGrowth = TableLoaderManager.LoadSimulationGrowthTable();
+            tableSimulationTool = tableLoaderManager.LoadSimulationToolTable();
+            tableSimulationGrowth = tableLoaderManager.LoadSimulationGrowthTable();
         }
 
         private void OnGUI()
