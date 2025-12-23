@@ -37,17 +37,16 @@ namespace GGemCo2DSimulation
                     Vector2 point = ctx.grid.GetCellCenterWorld(cell);
 
                     int found = 0;
-#if UNITY_6000_0_OR_NEWER
-                    int hitCount = Physics2D.OverlapCapsule(point, size, colliderAttackRange.direction, 0f, new ContactFilter2D().NoFilter(), _collider2Ds);
+
+                    // ContactFilter2D.noFilter 사용 (필요하면 레이어/트리거 정책을 별도 생성해서 전달)
+                    int hitCount = CompatPhysics2D.OverlapCapsuleNonAlloc(
+                        point, size, colliderAttackRange.direction, 0f,
+                        _collider2Ds);
+                    
                     // GcLogger.Log($"hitCount {hitCount}");
                     for (int i = 0; i < hitCount; i++)
                     {
                         Collider2D hit = _collider2Ds[i];
-#else
-                    Physics2D.OverlapCapsuleNonAlloc(point, size, colliderCheckCharacter.direction, 0f, _collider2Ds);
-                    foreach (var hit in _collider2Ds)
-                    {
-#endif
                         if (!hit || !hit.CompareTag(ConfigTags.GetValue(ConfigTags.Keys.Npc))) continue;
                         CharacterHitArea characterHitArea = hit.GetComponent<CharacterHitArea>();
                         if (characterHitArea == null) continue;
@@ -105,13 +104,14 @@ namespace GGemCo2DSimulation
                     Vector2 point = ctx.grid.GetCellCenterWorld(cell);
 
 #if UNITY_6000_0_OR_NEWER
-                    int hitCount = Physics2D.OverlapCapsule(point, size, colliderAttackRange.direction, 0f, new ContactFilter2D().NoFilter(), _collider2Ds);
+                    int hitCount = Physics2D.OverlapCapsule(point, size, colliderAttackRange.direction, 0f,
+                        ContactFilter2D.noFilter, _collider2Ds);
                     // GcLogger.Log($"hitCount {hitCount}");
                     for (int i = 0; i < hitCount; i++)
                     {
                         Collider2D hit = _collider2Ds[i];
 #else
-                    Physics2D.OverlapCapsuleNonAlloc(point, size, colliderCheckCharacter.direction, 0f, _collider2Ds);
+                    Physics2D.OverlapCapsuleNonAlloc(point, size, colliderAttackRange.direction, 0f, _collider2Ds);
                     foreach (var hit in _collider2Ds)
                     {
 #endif
