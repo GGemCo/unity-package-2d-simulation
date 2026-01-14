@@ -1,6 +1,6 @@
 {
 	"name": "com.ggemco.2d.simulation",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"displayName": "GGemCo 2D Simulation",
 	"description": "시뮬레이션 설정, 시간 설정, 작물 키우기등의 조작 관련 패키지\nCore 패키지가 필요 합니다.",
     "documentationUrl": "https://ggemco.notion.site/216bf593397e800a8f66e70c96aefbc2?v=270bf593397e8007b746000c5b2fca89",
